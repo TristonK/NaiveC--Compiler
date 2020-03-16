@@ -9,7 +9,7 @@ int main(int argc, char** argv){
             return 1;
         }
         yyrestart(yyin);
-    }
-    while(yylex()!=0);
+    } else{return 1;}
+    yyparse();
     return 0;
 }

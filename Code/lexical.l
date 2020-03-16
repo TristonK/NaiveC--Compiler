@@ -1,12 +1,21 @@
 %{
     #include<stdio.h>
+    #include<syntax.tab.h>
+
+    int yycolumn = 1;
+    #define YY_USER_ACTION\
+        yylloc.first_line = yylloc.last_line = yylineno;\
+        yylloc.first_column = yycolumn;\
+        yylloc.last_column = yycolumn + yyleng -1;\
+        yycolumn += yyleng;
 %}
 
 %option yylineno
 
 /*regular definitions*/
-delim [ \t\n\r]
+delim [ \t]
 WS {delim}+
+NEWLINE [\n\r]+
 COMMENTLINE \/\/[^\n]*
 COMMENT \/\*
 SEMI ;
@@ -42,6 +51,7 @@ ID [_a-zA-Z][_a-zA-Z0-9]*
 
 %%
 {WS} {printf("WS");}
+{NEWLINE} {yycolumn = 1;}
 {COMMENTLINE} {printf("it a comment in %d",yylineno);} 
 {COMMENT} {printf("COMMENT");char c = input();int flag = 0;while(flag!=2){if(flag==1 && c=='/'){flag=2;break;}else{flag=0;}if(c=='*'){flag=1;}c=input();}} 
 {SEMI} {printf(" ; ");}
