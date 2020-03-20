@@ -2,6 +2,7 @@
     #include "common.h"
     ast* root;
     int emptyFile=1;
+    int syn_error = 0;
 %}
 
 /*definitions*/
@@ -65,16 +66,21 @@ Tag: ID{$$=Ast("Tag",@$.first_line,nonTerm_);addChild($$,$1);}
     ;
 VarDec: ID {$$=Ast("VarDec",@$.first_line,nonTerm_);addChild($$,$1);}
     | VarDec LB INT RB {$$=Ast("VarDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
+    | VarDec LB error RB {}
     ;
 FunDec: ID LP VarList RP {$$=Ast("FunDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | ID LP RP {$$=Ast("FunDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+    | ID LP error RP {}
     ;
 VarList: ParamDec COMMA VarList {$$=Ast("VarList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | ParamDec {$$=Ast("VarList",@$.first_line,nonTerm_);addChild($$,$1);}
     ;
-ParamDec: Specifier VarList {$$=Ast("ParamDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
+ParamDec: Specifier VarDec {$$=Ast("ParamDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
+    | error RP {}
+    | error SEMI {}
     ;
 CompSt: LC DefList StmtList RC {$$=Ast("CompSt",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
+    | LC error RC
     ;
 StmtList: Stmt StmtList {$$=Ast("StmtList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
     | {$$=Ast("StmtList",@$.first_line,nonTerm_);}
@@ -82,7 +88,7 @@ StmtList: Stmt StmtList {$$=Ast("StmtList",@$.first_line,nonTerm_);addChild($$,$
 Stmt: Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | CompSt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);}
     | RETURN Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
-    | IF LP Exp RP Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
+    | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     | IF LP Exp RP Stmt ELSE Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);addChild($$,$6);}
     | WHILE LP Exp RP Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     ;
@@ -123,6 +129,8 @@ Args: Exp COMMA Args {$$=Ast("Args",@$.first_line,syn_);addChild($$,$1);addChild
 %%
 #include "lex.yy.c"
 
-yyerror(char* msg){
-    fprintf(stderr,"error1: %s\n", msg);
+int yyerror(char* msg){
+    syn_error = 1;
+    printf("Error type B at Line %d: %s.\n", yylineno, msg);
+    return 0;
 }

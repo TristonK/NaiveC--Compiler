@@ -37,7 +37,7 @@ void printTree(ast* root, int index){
         }
         break;
     case lex_:
-        printf("%s\n",root->name);
+        printf("%s\n",root->name,index);
         break;
     case id_:
         printf("%s: %s\n",root->name,root->context);

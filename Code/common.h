@@ -1,6 +1,11 @@
 # include<stdio.h>
 #include<stdlib.h>
 
+int yylex();
+void yyrestart(FILE*);
+int yyparse();
+int yyerror(char* msg);
+
 enum astOutType {syn_,nonTerm_,lex_,id_,type_,int_,float_};
 
 typedef struct ast {   

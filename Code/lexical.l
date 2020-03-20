@@ -1,8 +1,11 @@
 %{
     #include "syntax.tab.h"
+    //#define YYDEBUG 1
     //#include "common.h"
+   // #define Lexbug
     FILE* yyin;
     int yycolumn = 1;
+    int emptyeof=0;
     #define YY_USER_ACTION\
         yylloc.first_line = yylloc.last_line = yylineno;\
         yylloc.first_column = yycolumn;\
@@ -56,41 +59,157 @@ ID [_a-zA-Z][_a-zA-Z0-9]*
 
 %%
 {WS} { }
-{NEWLINE} {yycolumn = 1;}
+{NEWLINE} {
+    #ifdef Lexbug
+    printf("\n");
+    #endif
+    yycolumn = 1;}
 {COMMENTLINE} { } 
 {COMMENT} {char c = input();int flag = 0;while(flag!=2){if(flag==1 && c=='/'){flag=2;break;}else{flag=0;}if(c=='*'){flag=1;}c=input();}} 
-{SEMI} {yylval.node = Ast("SEMI",yylineno,lex_);return SEMI;}
-{COMMA} {yylval.node = Ast("COMMA",yylineno,lex_);return COMMA;}
-{ASSIGNOP} {yylval.node = Ast("ASSIGNOP",yylineno,lex_);return ASSIGNOP;}
-{RELOP} {yylval.node = nAst("RELOP",yylineno,lex_,yytext); return RELOP;}
-{PLUS} {yylval.node = Ast("PLUS",yylineno,lex_);return PLUS;}
-{MINUS} {yylval.node = Ast("MINUS",yylineno,lex_);return MINUS;}
-{STAR} {yylval.node = Ast("STAR",yylineno,lex_);return STAR;}
-{DIV} {yylval.node = Ast("DIV",yylineno,lex_);return DIV;}
-{AND} {yylval.node = Ast("AND",yylineno,lex_);return AND;}
-{OR} {yylval.node = Ast("OR",yylineno,lex_);return OR;}
-{DOT} {yylval.node = Ast("DOT",yylineno,lex_);return DOT;}
-{NOT} {yylval.node = Ast("NOT",yylineno,lex_);return NOT;}
-{TYPE} {yylval.node = nAst("TYPE",yylineno,type_,yytext);return TYPE;}
-{LP} {yylval.node = Ast("LP",yylineno,lex_);return LP;}
-{RP} {yylval.node = Ast("RP",yylineno,lex_);return RP;}
-{LB} {yylval.node = Ast("LB",yylineno,lex_);return LB;}
-{RB} {yylval.node = Ast("RB",yylineno,lex_);return RB;}
-{LC} {yylval.node = Ast("LC",yylineno,lex_);return LC;}
-{RC} {yylval.node = Ast("RC",yylineno,lex_);return RC;}
+{SEMI} {
+    #ifdef Lexbug
+    printf("SEMI ");
+    #endif
+    yylval.node = Ast("SEMI",yylineno,lex_);return SEMI;}
+{COMMA} {
+    #ifdef Lexbug
+    printf("COMMA ");
+    #endif
+    yylval.node = Ast("COMMA",yylineno,lex_);return COMMA;}
+{ASSIGNOP} {
+    #ifdef Lexbug
+    printf("ASSIGNOP ");
+    #endif
+    yylval.node = Ast("ASSIGNOP",yylineno,lex_);return ASSIGNOP;}
+{RELOP} {
+    #ifdef Lexbug
+    printf("RELOP ");
+    #endif
+    yylval.node = nAst("RELOP",yylineno,lex_,yytext); return RELOP;}
+{PLUS} {
+    #ifdef Lexbug
+    printf("PLUS ");
+    #endif
+    yylval.node = Ast("PLUS",yylineno,lex_);return PLUS;}
+{MINUS} {
+    #ifdef Lexbug
+    printf("MINUS ");
+    #endif
+    yylval.node = Ast("MINUS",yylineno,lex_);return MINUS;}
+{STAR} {
+    #ifdef Lexbug
+    printf("STAR ");
+    #endif
+    yylval.node = Ast("STAR",yylineno,lex_);return STAR;}
+{DIV} {
+    #ifdef Lexbug
+    printf("DIV ");
+    #endif
+    yylval.node = Ast("DIV",yylineno,lex_);return DIV;}
+{AND} {
+    #ifdef Lexbug
+    printf("AND ");
+    #endif
+    yylval.node = Ast("AND",yylineno,lex_);return AND;}
+{OR} {
+    #ifdef Lexbug
+    printf("OR ");
+    #endif
+    yylval.node = Ast("OR",yylineno,lex_);return OR;}
+{DOT} {
+    #ifdef Lexbug
+    printf("DOT ");
+    #endif
+    yylval.node = Ast("DOT",yylineno,lex_);return DOT;}
+{NOT} {
+    #ifdef Lexbug
+    printf("NOT ");
+    #endif
+    yylval.node = Ast("NOT",yylineno,lex_);return NOT;}
+{TYPE} { 
+    #ifdef Lexbug
+    printf("TYPE ");
+    #endif
+    yylval.node = nAst("TYPE",yylineno,type_,yytext);return TYPE;}
+{LP} {
+    #ifdef Lexbug
+    printf("LP ");
+    #endif
+    yylval.node = Ast("LP",yylineno,lex_);return LP;}
+{RP} {
+    #ifdef Lexbug
+    printf("RP ");
+    #endif
+    yylval.node = Ast("RP",yylineno,lex_);return RP;}
+{LB} {
+    #ifdef Lexbug
+    printf("LB ");
+    #endif
+    yylval.node = Ast("LB",yylineno,lex_);return LB;}
+{RB} {
+    #ifdef Lexbug
+    printf("RB ");
+    #endif
+    yylval.node = Ast("RB",yylineno,lex_);return RB;}
+{LC} {
+    #ifdef Lexbug
+    printf("LC ");
+    #endif
+    yylval.node = Ast("LC",yylineno,lex_);return LC;}
+{RC} {
+    #ifdef Lexbug
+    printf("RC ");
+    #endif
+    yylval.node = Ast("RC",yylineno,lex_);return RC;}
 {STRUCT} {yylval.node = Ast("STRUCT",yylineno,lex_);return STRUCT;}
-{RETURN} {yylval.node = Ast("RETURN",yylineno,lex_);return RETURN;} 
-{IF} {yylval.node = Ast("IF",yylineno,lex_);return IF;}
-{ELSE} {yylval.node = Ast("ELSE",yylineno,lex_);return ELSE;}
-{WHILE} {yylval.node = Ast("WHILE",yylineno,lex_);return WHILE;}
-{INT} {yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=atoi(yytext);return INT;}
-{OCTINT} {yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=(int)strtol(yytext,NULL,8);return INT;}
+{RETURN} {
+    #ifdef Lexbug
+    printf("RETURN ");
+    #endif
+    yylval.node = Ast("RETURN",yylineno,lex_);return RETURN;} 
+{IF} {
+    #ifdef Lexbug
+    printf("IF ");
+    #endif
+    yylval.node = Ast("IF",yylineno,lex_);return IF;}
+{ELSE} {
+    #ifdef Lexbug
+    printf("ELSE ");
+    #endif
+    yylval.node = Ast("ELSE",yylineno,lex_);return ELSE;}
+{WHILE} {
+    #ifdef Lexbug
+    printf("WHILE ");
+    #endif
+    yylval.node = Ast("WHILE",yylineno,lex_);return WHILE;}
+{INT} {
+    #ifdef Lexbug
+    printf("INT ");
+    #endif
+    yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=atoi(yytext);return INT;}
+{OCTINT} {
+    #ifdef Lexbug
+    printf("OCTINT ");
+    #endif
+    yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=(int)strtol(yytext,NULL,8);return INT;}
 {OCTINT_BAD} {fprintf(stderr,"Error type A at Line %d: Illegal octal number \'%s\'.\n",yylineno,yytext);lex_error=1;}
-{HEXINT} {yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=(int)strtol(yytext,NULL,16);return INT;}
+{HEXINT} {
+    #ifdef Lexbug
+    printf("HEXINT ");
+    #endif
+    yylval.node = Ast("INT",yylineno,int_);yylval.node->val.intVal=(int)strtol(yytext,NULL,16);return INT;}
 {HEXINT_BAD} {fprintf(stderr,"Error type A at Line %d: Illegal hexadecimal number \'%s\'.\n",yylineno,yytext);lex_error=1;}
-{FLOAT} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.intVal=atof(yytext);return FLOAT;}
+{FLOAT} {
+    #ifdef Lexbug
+    printf("FLOAT ");
+    #endif
+    yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.intVal=atof(yytext);return FLOAT;}
 {FLOATEXP} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.intVal=atoi(yytext);return FLOAT;}
 {FLOATEXP_BAD} {fprintf(stderr,"Error type A at Line %d: Illegal floating point number \"%s\".\n",yylineno,yytext);lex_error=1;}
-{ID} {yylval.node = nAst("ID",yylineno,id_,yytext);return ID;}
+{ID} {
+    #ifdef Lexbug
+    printf("ID ");
+    #endif
+    yylval.node = nAst("ID",yylineno,id_,yytext);return ID;}
 .   { fprintf(stderr,"Error type A at Line %d: Mysterious characters \"%s\".\n", yylineno, yytext);lex_error = 1;}
 %%
