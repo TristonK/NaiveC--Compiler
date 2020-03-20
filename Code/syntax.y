@@ -59,30 +59,30 @@ Specifier: TYPE {$$=Ast("Specifier",@$.first_line,nonTerm_);addChild($$,$1);}
 StructSpecifier: STRUCT OptTag LC DefList RC {$$=Ast("StructSpecifier",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     | STRUCT Tag {$$=Ast("StructSpecifier",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
     ;
-OptTag: ID {$$=Ast("OptTag",@$.first_line,nonTerm_);addChild($$,$1);}
+OptTag: ID {$$=Ast("OptTag",@$.first_line,syn_);addChild($$,$1);}
     | {$$=Ast("OptTag",@$.first_line,nonTerm_);}
     ;
-Tag: ID{$$=Ast("Tag",@$.first_line,nonTerm_);addChild($$,$1);}
+Tag: ID{$$=Ast("Tag",@$.first_line,syn_);addChild($$,$1);}
     ;
-VarDec: ID {$$=Ast("VarDec",@$.first_line,nonTerm_);addChild($$,$1);}
-    | VarDec LB INT RB {$$=Ast("VarDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
+VarDec: ID {$$=Ast("VarDec",@$.first_line,syn_);addChild($$,$1);}
+    | VarDec LB INT RB {$$=Ast("VarDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | VarDec LB error RB {}
     ;
-FunDec: ID LP VarList RP {$$=Ast("FunDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
-    | ID LP RP {$$=Ast("FunDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+FunDec: ID LP VarList RP {$$=Ast("FunDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
+    | ID LP RP {$$=Ast("FunDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | ID LP error RP {}
     ;
-VarList: ParamDec COMMA VarList {$$=Ast("VarList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
-    | ParamDec {$$=Ast("VarList",@$.first_line,nonTerm_);addChild($$,$1);}
+VarList: ParamDec COMMA VarList {$$=Ast("VarList",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+    | ParamDec {$$=Ast("VarList",@$.first_line,syn_);addChild($$,$1);}
     ;
-ParamDec: Specifier VarDec {$$=Ast("ParamDec",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
+ParamDec: Specifier VarDec {$$=Ast("ParamDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | error RP {}
     | error SEMI {}
     ;
-CompSt: LC DefList StmtList RC {$$=Ast("CompSt",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
+CompSt: LC DefList StmtList RC {$$=Ast("CompSt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | LC error RC
     ;
-StmtList: Stmt StmtList {$$=Ast("StmtList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
+StmtList: Stmt StmtList {$$=Ast("StmtList",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | {$$=Ast("StmtList",@$.first_line,nonTerm_);}
     ;
 Stmt: Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}

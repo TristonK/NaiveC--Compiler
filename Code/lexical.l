@@ -205,8 +205,8 @@ ID [_a-zA-Z][_a-zA-Z0-9]*
     #ifdef Lexbug
     printf("FLOAT ");
     #endif
-    yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=atof(yytext);return FLOAT;}
-{FLOATEXP} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=atof(yytext);return FLOAT;}
+    yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=strtof(yytext,NULL);return FLOAT;}
+{FLOATEXP} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=strtof(yytext,NULL);return FLOAT;}
 {FLOATEXP_BAD} {fprintf(stderr,"Error type A at Line %d: Illegal floating point number \"%s\".\n",yylineno,yytext);lex_error=1;}
 {ID} {
     #ifdef Lexbug
