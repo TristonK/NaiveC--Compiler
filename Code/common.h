@@ -3,7 +3,7 @@
 
 enum astOutType {syn_,nonTerm_,lex_,id_,type_,int_,float_};
 
-typedef struct AST {   
+typedef struct ast {   
     char* name;
     char* context;
     int outType;
@@ -12,10 +12,12 @@ typedef struct AST {
         float floatVal; 
         unsigned int intVal; 
     }val; 
-    ast* parent;
-    ast* child;
-    ast* sib;
+    struct ast* parent;
+    struct ast* child;
+    struct ast* sib;
 }ast;
 
-ast* Ast(char* name,int lineno,int type);
+#define Ast(name,lineno,type) nAst(name,lineno,type,NULL)
+ast* nAst(char* name,int lineno,int type,char* context);
 void addChild(ast* p, ast* c);
+void printTree(ast* root, int index);

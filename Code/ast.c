@@ -1,7 +1,5 @@
 # include "common.h"
 
-#define Ast(name,lineno,type) nAst(name,lineno,type,NULL)
-
 ast* nAst(char* name,int lineno,int type,char* cont){
     ast* node = (ast*) malloc(sizeof(ast));
     node->name = (char *)malloc(strlen(name)+1);
@@ -15,8 +13,6 @@ ast* nAst(char* name,int lineno,int type,char* cont){
     return node;
 }
 
-
-
 void addChild(ast* p, ast* c){
     if(p->child==NULL){p->child=c;c->parent=p;return;}
     ast* tmp = p->child;
@@ -26,5 +22,41 @@ void addChild(ast* p, ast* c){
 }
 
 void printTree(ast* root, int index){
-
+    if(root==NULL){return;}
+    for(int i=0;i<index;i++){
+        printf("  ");
+    }
+    switch (root->outType)
+    {
+    case syn_:
+        printf("%s (%d)\n",root->name,root->lineno);
+        break;
+    case nonTerm_:
+        if(root->child!=NULL){
+            printf("%s (%d)\n",root->name,root->lineno);
+        }
+        break;
+    case lex_:
+        printf("%s\n",root->name);
+        break;
+    case id_:
+        printf("%s: %s\n",root->name,root->context);
+        break;
+    case type_:
+        printf("%s: %s\n",root->name,root->context);
+        break;
+    case int_:
+        printf("%s: %d\n",root->name,root->val.intVal);
+        break;
+    case float_:
+        printf("%s: %d\n",root->name,root->val.floatVal);
+        break;
+    default:
+        break;
+    }
+    ast* ch = root->child;
+    while(ch!=NULL){
+        printTree(ch,index+1);
+        ch = ch->sib;
+    }
 }
