@@ -49,7 +49,7 @@ ELSE else
 WHILE while
 INT (0)|([1-9][0-9]*)
 OCTINT (0[0-7]+)
-OCTINT_BAD (0[0-9a-wyzA-WYZ]+)
+OCTINT_BAD (0[0-9a-wyzA-WYZ]+[0-9a-zA-Z]*)
 HEXINT 0[xX][0-9a-fA-F]+
 HEXINT_BAD 0[xX][0-9a-zA-Z]+
 FLOAT [0-9]+\.[0-9]+

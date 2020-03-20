@@ -5,7 +5,7 @@ extern ast* root;
 extern int lex_error;
 extern int syn_error;
 extern int emptyFile;
-extern int emptyeof;
+//extern int emptyeof;
 extern int yylineno;
 
 int main(int argc, char** argv){

@@ -2,9 +2,9 @@
 #include<stdlib.h>
 
 int yylex();
-void yyrestart(FILE*);
+void yyrestart(FILE* yyin);
 int yyparse();
-int yyerror(char* msg);
+int yyerror(const char* msg);
 
 enum astOutType {syn_,nonTerm_,lex_,id_,type_,int_,float_};
 

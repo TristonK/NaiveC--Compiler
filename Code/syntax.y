@@ -1,6 +1,7 @@
 %{
     #include "common.h"
     ast* root;
+    #define YYERROR_VERBOSE
     int emptyFile=1;
     int syn_error = 0;
 %}
@@ -49,6 +50,7 @@ ExtDefList: ExtDef ExtDefList {$$=Ast("ExtDefList",@$.first_line,nonTerm_);addCh
 ExtDef: Specifier ExtDecList SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | Specifier SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
     | Specifier FunDec CompSt {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+    | error SEMI {}
     ;
 ExtDecList: VarDec {$$=Ast("ExtDecList",@$.first_line,nonTerm_);addChild($$,$1);}
     | VarDec COMMA ExtDecList {$$=Ast("ExtDecList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
@@ -58,6 +60,7 @@ Specifier: TYPE {$$=Ast("Specifier",@$.first_line,nonTerm_);addChild($$,$1);}
     ;
 StructSpecifier: STRUCT OptTag LC DefList RC {$$=Ast("StructSpecifier",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     | STRUCT Tag {$$=Ast("StructSpecifier",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
+    | STRUCT OptTag LC error RC {}
     ;
 OptTag: ID {$$=Ast("OptTag",@$.first_line,syn_);addChild($$,$1);}
     | {$$=Ast("OptTag",@$.first_line,nonTerm_);}
@@ -67,6 +70,7 @@ Tag: ID{$$=Ast("Tag",@$.first_line,syn_);addChild($$,$1);}
 VarDec: ID {$$=Ast("VarDec",@$.first_line,syn_);addChild($$,$1);}
     | VarDec LB INT RB {$$=Ast("VarDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | VarDec LB error RB {}
+    | error RB {}
     ;
 FunDec: ID LP VarList RP {$$=Ast("FunDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | ID LP RP {$$=Ast("FunDec",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
@@ -80,7 +84,6 @@ ParamDec: Specifier VarDec {$$=Ast("ParamDec",@$.first_line,syn_);addChild($$,$1
     | error SEMI {}
     ;
 CompSt: LC DefList StmtList RC {$$=Ast("CompSt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
-    | LC error RC
     ;
 StmtList: Stmt StmtList {$$=Ast("StmtList",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | {$$=Ast("StmtList",@$.first_line,nonTerm_);}
@@ -91,6 +94,10 @@ Stmt: Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     | IF LP Exp RP Stmt ELSE Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);addChild($$,$6);addChild($$,$7);}
     | WHILE LP Exp RP Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
+    | IF LP error RP Stmt %prec LOWER_THAN_ELSE {}
+    | WHILE LP error RP Stmt {}
+    | error SEMI {}
+    | error {}
     ;
 DefList: Def DefList {$$=Ast("DefList",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | {$$=Ast("DefList",@$.first_line,nonTerm_);}
@@ -121,6 +128,7 @@ Exp: Exp ASSIGNOP Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild
     | ID {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);}
     | INT {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);}
     | FLOAT {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);}
+    | error RP {}
     ;
 Args: Exp COMMA Args {$$=Ast("Args",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | Exp {$$=Ast("Args",@$.first_line,syn_);addChild($$,$1);}
@@ -129,7 +137,7 @@ Args: Exp COMMA Args {$$=Ast("Args",@$.first_line,syn_);addChild($$,$1);addChild
 %%
 #include "lex.yy.c"
 
-int yyerror(char* msg){
+int yyerror(const char* msg){
     syn_error = 1;
     printf("Error type B at Line %d: %s.\n", yylineno, msg);
     return 0;
