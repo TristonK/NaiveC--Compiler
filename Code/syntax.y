@@ -34,7 +34,7 @@
 %left RELOP
 %left PLUS MINUS
 %left STAR DIV
-%right NOT
+%right NOT UMINUS
 %left LP RP LB RB DOT
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
@@ -48,7 +48,7 @@ ExtDefList: ExtDef ExtDefList {$$=Ast("ExtDefList",@$.first_line,nonTerm_);addCh
     ;
 ExtDef: Specifier ExtDecList SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | Specifier SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
-    | Specifier FunDec CompSt {$$=Ast("ExtDefList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+    | Specifier FunDec CompSt {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     ;
 ExtDecList: VarDec {$$=Ast("ExtDecList",@$.first_line,nonTerm_);addChild($$,$1);}
     | VarDec COMMA ExtDecList {$$=Ast("ExtDecList",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
@@ -89,7 +89,7 @@ Stmt: Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2
     | CompSt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);}
     | RETURN Exp SEMI {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
-    | IF LP Exp RP Stmt ELSE Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);addChild($$,$6);}
+    | IF LP Exp RP Stmt ELSE Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);addChild($$,$6);addChild($$,$7);}
     | WHILE LP Exp RP Stmt {$$=Ast("Stmt",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);addChild($$,$5);}
     ;
 DefList: Def DefList {$$=Ast("DefList",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
@@ -112,7 +112,7 @@ Exp: Exp ASSIGNOP Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild
     | Exp STAR Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | Exp DIV Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | LP Exp RP {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
-    | MINUS Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
+    | MINUS Exp %prec UMINUS {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | NOT Exp {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);}
     | ID LP Args RP {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);addChild($$,$4);}
     | ID LP RP {$$=Ast("Exp",@$.first_line,syn_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}

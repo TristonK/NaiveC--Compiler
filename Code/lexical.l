@@ -2,7 +2,7 @@
     #include "syntax.tab.h"
     //#define YYDEBUG 1
     //#include "common.h"
-   // #define Lexbug
+    //#define Lexbug
     FILE* yyin;
     int yycolumn = 1;
     int emptyeof=0;
@@ -21,7 +21,8 @@ delim [ \t]
 WS {delim}+
 NEWLINE [\n\r]+
 COMMENTLINE \/\/[^\n]*
-COMMENT \/\*
+COMMENT "/*"([^\*]*"*"+[^\*\/])*[^*]*"*"+"/"
+UN_COMMENT "/*"
 SEMI ;
 COMMA ,
 ASSIGNOP =
@@ -48,7 +49,7 @@ ELSE else
 WHILE while
 INT (0)|([1-9][0-9]*)
 OCTINT (0[0-7]+)
-OCTINT_BAD (0[0-9a-zA-Z]+])
+OCTINT_BAD (0[0-9a-wyzA-WYZ]+)
 HEXINT 0[xX][0-9a-fA-F]+
 HEXINT_BAD 0[xX][0-9a-zA-Z]+
 FLOAT [0-9]+\.[0-9]+
@@ -65,7 +66,8 @@ ID [_a-zA-Z][_a-zA-Z0-9]*
     #endif
     yycolumn = 1;}
 {COMMENTLINE} { } 
-{COMMENT} {char c = input();int flag = 0;while(flag!=2){if(flag==1 && c=='/'){flag=2;break;}else{flag=0;}if(c=='*'){flag=1;}c=input();}} 
+{COMMENT} {/*int c = input();int flag = 0;while(flag!=2 && c!=EOF){printf("%d\n",c);if(flag==1 && c=='/'){flag=2;break;}else{flag=0;}if(c=='*'){flag=1;}if(c==EOF){fprintf(stderr,"Error type A at Line %d: unterminated comment.\n",yylineno);break;}c=input();}*/}
+{UN_COMMENT} {fprintf(stderr,"Error type A at Line %d: unterminated comment.\n",yylineno);}
 {SEMI} {
     #ifdef Lexbug
     printf("SEMI ");
@@ -203,8 +205,8 @@ ID [_a-zA-Z][_a-zA-Z0-9]*
     #ifdef Lexbug
     printf("FLOAT ");
     #endif
-    yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.intVal=atof(yytext);return FLOAT;}
-{FLOATEXP} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.intVal=atoi(yytext);return FLOAT;}
+    yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=atof(yytext);return FLOAT;}
+{FLOATEXP} {yylval.node = Ast("FLOAT",yylineno,float_);yylval.node->val.floatVal=atof(yytext);return FLOAT;}
 {FLOATEXP_BAD} {fprintf(stderr,"Error type A at Line %d: Illegal floating point number \"%s\".\n",yylineno,yytext);lex_error=1;}
 {ID} {
     #ifdef Lexbug
