@@ -1,6 +1,8 @@
 # include<stdio.h>
 #include<stdlib.h>
 
+// lex
+
 int yylex();
 void yyrestart(FILE* yyin);
 int yyparse();
@@ -26,3 +28,7 @@ typedef struct ast {
 ast* nAst(char* name,int lineno,int type,char* context);
 void addChild(ast* p, ast* c);
 void printTree(ast* root, int index);
+
+//sema
+
+void printSemaError(int type, int lineno, char* info);

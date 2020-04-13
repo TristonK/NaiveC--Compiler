@@ -23,8 +23,10 @@ int main(int argc, char** argv){
         if(emptyFile){
             printf("Program (%d)\n", yylineno);
         }else{
-            printTree(root,0);
+            //printTree(root,0);
             //printf("end\n");
+            printSemaError(17,1,"o");
+            printSemaError(7,2,"");
         }
     }
     return 0;
