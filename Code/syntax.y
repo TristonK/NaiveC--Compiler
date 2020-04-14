@@ -50,6 +50,7 @@ ExtDefList: ExtDef ExtDefList {$$=Ast("ExtDefList",@$.first_line,nonTerm_);addCh
 ExtDef: Specifier ExtDecList SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | Specifier SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);}
     | Specifier FunDec CompSt {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
+    | Specifier FunDec SEMI {$$=Ast("ExtDef",@$.first_line,nonTerm_);addChild($$,$1);addChild($$,$2);addChild($$,$3);}
     | error SEMI {}
     ;
 ExtDecList: VarDec {$$=Ast("ExtDecList",@$.first_line,nonTerm_);addChild($$,$1);}

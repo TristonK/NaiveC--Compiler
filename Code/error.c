@@ -23,6 +23,6 @@ char* semaError[19] = {
 };
 
 void printSemaError(int type, int lineno, char* info){
-    fprintf(stderr, "Error type %d at line %d: ",type,lineno);
+    fprintf(stderr, "Error type %d at Line %d: ",type,lineno);
     fprintf(stderr, semaError[type-1],info);   
 }

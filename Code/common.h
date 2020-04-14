@@ -29,6 +29,82 @@ ast* nAst(char* name,int lineno,int type,char* context);
 void addChild(ast* p, ast* c);
 void printTree(ast* root, int index);
 
-//sema
+/*--------------^-^----sema--------------------------------*/
 
+//symtable
+
+typedef struct Type_* Type;
+typedef struct FieldList_* FieldList;
+typedef struct Agru_* Agru;
+typedef struct Func_* Func;
+typedef struct Symbol_* Symbol;
+
+#define hashSize 0x3fff
+
+struct Type_
+{
+    enum {BASIC=1, ARRAY=3,STRUCTURE=4} kind;
+    union 
+    {
+        int basic;// int:1 float:2
+        struct {
+            Type elem;
+            int size;
+        }array;
+        FieldList structure;
+    }u;
+};
+
+struct FieldList_
+{
+    char* name;
+    Type type;
+    FieldList tail;
+};
+
+struct Agru_
+{
+    Type type;
+    Agru next;
+};
+
+struct Func_
+{
+    Type returnType;
+    int isDefined; /*1-defined 0-notDefined*/
+    int lineno;
+    Agru agru;
+};
+
+struct Symbol_
+{
+    char* name;
+    union 
+    {
+        Type type;
+        Func func;
+    }t;
+    Symbol hashNext;
+    Symbol stackNext;
+};
+
+// error.c
 void printSemaError(int type, int lineno, char* info);
+
+// hash.c
+unsigned int getHash(char* name);
+void createHash();
+
+//envStack.c
+
+void pushStack();
+
+void popStack();
+
+//sematic.c
+#define c1s(x) x->child->sib
+
+void semaAnalysis(ast* root);
+void getExtDef(ast* root);
+void checkExtDef(ast* extDef);
+void getStructure(ast* specifier);
