@@ -107,4 +107,4 @@ void popStack();
 void semaAnalysis(ast* root);
 void getExtDef(ast* root);
 void checkExtDef(ast* extDef);
-void getStructure(ast* specifier);
+FieldList getStructure(ast* specifier);

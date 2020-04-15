@@ -1,7 +1,7 @@
 #include "common.h"
 
 Symbol createSymbol(char* name){
-    Symbol ret = malloc(sizeof(Symbol));
+    Symbol ret = malloc(sizeof(struct Symbol_));
     ret->name = name;
     return ret;
 }

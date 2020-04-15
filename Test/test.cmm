@@ -1,0 +1,15 @@
+struct abs{
+    int a;
+    int b[10];
+    float c;
+}d;
+
+int e;
+
+int shit(){
+    return 1;
+}
+
+int shit2(int a, float b){
+    int a = b+1;
+}

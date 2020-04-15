@@ -1,0 +1,110 @@
+Program (1)
+  ExtDefList (1)
+    ExtDef (1)
+      Specifier (1)
+        StructSpecifier (1)
+          STRUCT
+          OptTag (1)
+            ID: abs
+          LC
+          DefList (2)
+            Def (2)
+              Specifier (2)
+                TYPE: int
+              DecList (2)
+                Dec (2)
+                  VarDec (2)
+                    ID: a
+              SEMI
+            DefList (3)
+              Def (3)
+                Specifier (3)
+                  TYPE: int
+                DecList (3)
+                  Dec (3)
+                    VarDec (3)
+                      VarDec (3)
+                        ID: b
+                      LB
+                      INT: 10
+                      RB
+                SEMI
+              DefList (4)
+                Def (4)
+                  Specifier (4)
+                    TYPE: float
+                  DecList (4)
+                    Dec (4)
+                      VarDec (4)
+                        ID: c
+                  SEMI
+          RC
+      ExtDecList (5)
+        VarDec (5)
+          ID: d
+      SEMI
+    ExtDefList (7)
+      ExtDef (7)
+        Specifier (7)
+          TYPE: int
+        ExtDecList (7)
+          VarDec (7)
+            ID: e
+        SEMI
+      ExtDefList (9)
+        ExtDef (9)
+          Specifier (9)
+            TYPE: int
+          FunDec (9)
+            ID: shit
+            LP
+            RP
+          CompSt (9)
+            LC
+            StmtList (10)
+              Stmt (10)
+                RETURN
+                Exp (10)
+                  INT: 1
+                SEMI
+            RC
+        ExtDefList (13)
+          ExtDef (13)
+            Specifier (13)
+              TYPE: int
+            FunDec (13)
+              ID: shit2
+              LP
+              VarList (13)
+                ParamDec (13)
+                  Specifier (13)
+                    TYPE: int
+                  VarDec (13)
+                    ID: a
+                COMMA
+                VarList (13)
+                  ParamDec (13)
+                    Specifier (13)
+                      TYPE: float
+                    VarDec (13)
+                      ID: b
+              RP
+            CompSt (13)
+              LC
+              DefList (14)
+                Def (14)
+                  Specifier (14)
+                    TYPE: int
+                  DecList (14)
+                    Dec (14)
+                      VarDec (14)
+                        ID: a
+                      ASSIGNOP
+                      Exp (14)
+                        Exp (14)
+                          ID: b
+                        PLUS
+                        Exp (14)
+                          INT: 1
+                  SEMI
+              RC

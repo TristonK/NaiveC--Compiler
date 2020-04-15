@@ -37,5 +37,18 @@ int hashDelete(Symbol node){
     freeSymbol(node);
     #endif
 }
-
+/*
+root: ID
+*/
+Symbol hashFind(ast* root){
+    unsigned int nameHash = getHash(root->context);
+    Symbol ret = hashTable[nameHash];
+    while(ret!=NULL && strcmp(ret->name,root->context)){
+        ret = ret->hashNext;
+    }
+    if(ret==NULL){
+        ret = NULL;
+    }
+    return ret;
+}
 

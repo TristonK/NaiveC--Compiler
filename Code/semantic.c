@@ -16,6 +16,7 @@ void getExtDef(ast* root){
 
 void checkExtDef(ast* extDef){
     char* checkFlag = c1s(extDef)->name;
+    Type specifier = getSpecifier(extDef->child);
     if(!strcmp(checkFlag,"ExtDecList")){
 
     } else if(!strcmp(checkFlag,"SEMI")){
@@ -25,7 +26,7 @@ void checkExtDef(ast* extDef){
                 printSemaError(17, extDef->child->child->child->lineno, extDef->child->child->child->name);
                 */
             }else{
-                getStructure(extDef->child);
+                getStructure(extDef->child->child);
             }
         }
     } else if(!strcmp(checkFlag,"FunDec")){
@@ -38,7 +39,47 @@ void checkExtDef(ast* extDef){
     }
 }
 
-void getStructure(ast* specifier){}
+/*
+root: Specifier 
+child: TYPE | StructSpecifier
+*/
+Type getSpecifier(ast* root){
+    if(!strcmp(root->child->name,"TYPE")){
+        Type ret = malloc(sizeof(struct Type_));
+        if(!strcmp(root->child->context,"int")){
+            ret->kind = BASIC;
+            ret->u.basic = 1;
+        }else{
+            ret->kind = BASIC;
+            ret->u.basic = 2;
+        }
+        return ret;
+    } else{
+        return getStructure(root->child);
+    }
+}
+
+/*
+root: StructSpecifier
+child: STRUCT OptTag LC DefList RC
+      | STRUCT Tag
+*/
+Type getStructure(ast* root){
+    Type ret;
+    if(!strcmp(c1s(root)->name,"Tag")){
+        Symbol id = hashFind(c1s(root)->child); //Param:ID
+        if(id==NULL){
+            printSemaError(17,c1s(root)->child->lineno,c1s(root)->child->name);
+            retrun NULL;
+        }else{
+            ret = id ->t.type;
+        }
+    } else{
+        ret = (FieldList)malloc(sizeof(struct FieldList_));
+        
+    }
+    return ret;
+}
 
 void declareFunc(){}
 
