@@ -103,8 +103,12 @@ void popStack();
 
 //sematic.c
 #define c1s(x) x->child->sib
+#define c2s(x) x->child->child->sib
+#define c1s2(x) x->child->sib->sib
+#define c1s3(x) x->child->sib->sib->sib
+#define c2s2(x) x->child->child->sib->sib
 
 void semaAnalysis(ast* root);
 void getExtDef(ast* root);
 void checkExtDef(ast* extDef);
-FieldList getStructure(ast* specifier);
+Type getStructure(ast* root);

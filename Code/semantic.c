@@ -14,6 +14,13 @@ void getExtDef(ast* root){
     }
 }
 
+
+/*
+* root: extDef
+* child: Spcifier ExtDecList SEMI
+*      | Specifier SEMI
+*      | Specifier FunDec Compst
+*/
 void checkExtDef(ast* extDef){
     char* checkFlag = c1s(extDef)->name;
     Type specifier = getSpecifier(extDef->child);
@@ -75,7 +82,16 @@ Type getStructure(ast* root){
             ret = id ->t.type;
         }
     } else{
-        ret = (FieldList)malloc(sizeof(struct FieldList_));
+        ret = (Type)malloc(sizeof(struct Type_));
+        ret->kind = STRUCTURE;
+        FieldList struct_ = malloc(sizeof(struct FieldList_));
+        if(c1s(root)->child!=NULL){
+            struct_->name = c1s(root)->child->context;
+        }
+        else{ 
+            struct_-> name = "";
+        }
+        ret->u.structure = struct_;
         
     }
     return ret;
