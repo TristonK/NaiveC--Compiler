@@ -39,6 +39,7 @@ typedef struct Agru_* Agru;
 typedef struct Func_* Func;
 typedef struct Symbol_* Symbol;
 typedef struct Stack_* Stack;
+typedef struct retType_* retType;
 
 #define hashSize 0x3fff
 
@@ -98,6 +99,10 @@ struct Stack_
     Symbol next;
 };
 
+struct retType_{
+    Type type;
+    retType next;
+};
 
 // error.c
 void printSemaError(int type, int lineno, char* info);
@@ -107,6 +112,7 @@ unsigned int getHash(char* name);
 void createHash();
 void hashInsert(Symbol node);
 int hashDelete(Symbol node);
+Symbol hashFind(ast* root);
 int checkDup(char* name, int depth);
 Symbol FindStruct(ast* root);
 Symbol FindFunc(char* name);
@@ -125,6 +131,8 @@ Stack getEnv();
 #define c2s(x) x->child->child->sib
 #define c1s2(x) x->child->sib->sib
 #define c1s3(x) x->child->sib->sib->sib
+#define c1s4(x) x->child->sib->sib->sib->sib
+#define c1s5(x) x->child->sib->sib->sib->sib->sib
 #define c2s2(x) x->child->child->sib->sib
 
 void semaAnalysis(ast* root);

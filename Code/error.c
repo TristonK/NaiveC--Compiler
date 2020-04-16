@@ -10,9 +10,9 @@ char* semaError[19] = {
     "Type mismatched for operands%s.\n", // 7
     "Type mismatched for return%s.\n", // 8
     "Function \"%s\" is not applicable for arguments.\n", // 9
-    "\"%s\" is not an array.\n", // 10
+    "%s Var is not an array.\n", // 10
     "\"%s\" is not a function.\n", // 11
-    "\"%s\" is not an integer.\n", // 12
+    "var is not an integer%s.\n", // 12
     "Illegal use of \".\"%s.\n", // 13
     "Non-existent field \"%s\".\n", // 14
     "Redefined field \"%s\" or try to initialize.\n", // 15

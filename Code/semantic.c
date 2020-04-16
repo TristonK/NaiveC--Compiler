@@ -27,9 +27,9 @@ void getExtDef(ast* root){
 */
 void checkExtDef(ast* extDef){
     char* checkFlag = c1s(extDef)->name;
-    Type specifier = getSpecifier(extDef->child);
-    if(specifier==NULL){return;}
     if(!strcmp(checkFlag,"ExtDecList")){
+        Type specifier = getSpecifier(extDef->child);
+        if(specifier==NULL){return;}
         getExtDecList(c1s(extDef),specifier);
     } else if(!strcmp(checkFlag,"SEMI")){
         if(!strcmp(extDef->child->child->name,"StructSpecfier")){
@@ -42,6 +42,8 @@ void checkExtDef(ast* extDef){
             }
         }
     } else if(!strcmp(checkFlag,"FunDec")){
+        Type specifier = getSpecifier(extDef->child);
+        if(specifier==NULL){return;}
         if(c1s2(extDef)!=NULL){
             getFunc(c1s(extDef),specifier);
         } else{ //just declaration
@@ -132,6 +134,9 @@ FieldList getStructList(ast* root,FieldList field){
 FieldList getDef(ast* root,FieldList field){
     Type specifier = getSpecifier(root->child);
     if(specifier==NULL){return;}
+    if(field==NULL){
+        field = malloc(sizeof(struct FieldList_));
+    }
     field->type = specifier;
     return getDec(c1s(root),field);
 }
@@ -243,7 +248,12 @@ Symbol declareFunc(ast* root,Type type){
     Func func = malloc(sizeof(struct Func_));
     func->returnType = type;
     func->isDefined = 0;
-    func->lineno = root->child->lineno;    
+    func->lineno = root->child->lineno; 
+    if(!strcmp(c1s2(root)->name,"VarList")){
+        func->agru = getArg(c1s2(root),NULL);
+    }else{
+        func->agru = NULL;
+    }
     if(checkf!=NULL){
         if(!checkf->isfunc || !sameFunc(func,checkf->t.func)){
             printSemaError(19,func->lineno,root->child->context);
@@ -256,6 +266,36 @@ Symbol declareFunc(ast* root,Type type){
     hashInsert(sym);
     envInsert(sym);
     return sym;
+}
+
+/**
+ * root: VarList
+ * child: ParamDec COMMA VarList
+ *     / ParamDec
+*/
+
+Agru getArg(ast* root, Agru arg){
+    Agru arg2 = malloc(sizeof(struct Agru_));
+    if(arg==NULL){arg=arg2;}else{arg->next = arg2;}
+    arg2->type = getParamDec(root->child);
+    if(c1s(root)!=NULL){
+        getArg(c1s2(root),arg2);
+    }
+    return arg;
+}
+
+/**
+ * root: ParamDec
+ * child: Specifier VarDec
+*/
+Type getParamDec(ast* root){
+    Type type = getSpecifier(root->child);
+    if(c1s(c1s(root))!=NULL){
+        Symbol sym = getArray(c1s(root),type,0);
+        return sym->t.type;
+    }else{
+        return type;
+    }
 }
 
 int sameFunc(Func a, Func b){
@@ -298,9 +338,334 @@ int sameType(Type a, Type b){
     }
 }
 
-
+/*
+* root: FunDec
+*/
 void getFunc(ast* root, Type type){
+    pushStack();
     Symbol sym = declareFunc(root,type);
+    sym->t.func->lineno = root->child->lineno;
+    getCompst(root->sib,sym);
+    popStack();
+}
+
+
+/*
+    * root:Compst
+    * child: LC DefList StmtList RC
+    */
+void getCompst(ast* root,Symbol func){
+    pushStack();
+    checkDefList(c1s(root));
+    checkStmtList(c1s2(root),func);
+    popStack();
+}
+
+
+/*
+* root: DefList
+* child: Def DefList 
+       | NULL
+*/
+void checkDefList(ast* root){
+    if(root->child!=NULL){
+        checkDef(root->child);    
+        checkDefList(c1s(root));
+    }
+}
+
+/*
+* root: Def
+* child: Specifier DecList SEMI
+*/
+
+void checkDef(ast* root){
+    Type specifier = getSpecifier(root->child);
+    if(specifier==NULL){return;}
+    checkDec(c1s(root),specifier);
+}
+
+
+/*
+* root: DecList
+* child: Dec
+       | Dec COMMA DecList
+*/
+
+void checkDec(ast* root, Type type){
+    if(c1s(root->child)!=NULL){    
+        /**
+        * root: Dec
+        * child: VarDec
+        *      | VarDec ASSIGNOP Exp
+        */
+        Type spec = checkExp(c1s2(root->child));
+        if(spec!=NULL && !sameType(spec,type)){
+            printSemaError(5,c1s(root->child)->lineno,"");
+        }
+    } else{
+        if(c1s(root->child->child)!=NULL){//array
+            Symbol sym = getArray(root->child->child,type,0);
+        }else{
+            Symbol sym = createSymbol(type,root->child->child->child->context);
+            if(checkDup(sym->name,sym->depth)==-1){
+                printSemaError(15,root->child->child->child->lineno,sym->name);
+                return NULL;
+            }
+            hashInsert(sym);
+            envInsert(sym);
+        }
+    }
+    if(c1s(root)!=NULL){
+        checkDec(c1s2(root),type);
+    }
+}
+
+
+/**
+ * root: Exp
+ * child: Exp ASSIGNOP EXP
+ *      EXP AND EXP
+ *      EXP OR EXP
+ *      EXP RELOP EXP
+ *      EXP PLUS EXP
+ *      EXP MINUS EXP
+ *      EXP STAR EXP
+ *      EXP DIV EXP
+ *      LP EXP RP
+ *      MINUS EXP
+ *      NOT EXP
+ *      ID LP Args RP
+ *      ID LP RP
+ *      EXP LB EXP RB
+ *      EXP DOT ID
+ *      ID
+ *      INT 
+ *      FLOAT
+*/
+Type checkExp(ast* root){
+    if(!strcmp(root->child->name,"Exp")){
+        if(!strcmp(c1s(root)->name,"ASSIGNOP")){
+            Type a = checkExp(root->child);
+            Type b = checkExp(c1s2(root));
+            if(a==NULL||b==NULL) return NULL;
+            if(!sameType(a,b)){
+                printSemaError(5,c1s(root)->lineno,"");
+                return NULL;
+            } else{
+                if(!isVarible(root->child)){
+                    printSemaError(6,c1s(root)->lineno,"");
+                    return NULL;
+                }
+                return a;
+            }
+        } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")){
+            Type a = checkExp(root->child);
+            Type b = checkExp(c1s2(root));
+            if(a==NULL||b==NULL) return NULL;
+            if(sameType(a,b) && a->kind == BASIC && a->u.basic == 1){
+                return a;
+            }
+            printSemaError(7,c1s(root)->lineno,"");
+        } else if(!strcmp(c1s(root)->name,"RELOP")){
+            Type a = checkExp(root->child);
+            Type b = checkExp(c1s2(root));
+            if(a==NULL||b==NULL) return NULL;
+            if(!sameType(a,b)){
+                printSemaError(7,c1s(root)->lineno,"");
+                return NULL;
+            }
+            Type ret = malloc(sizeof(struct Type_));
+            ret->kind = BASIC;
+            ret->u.basic = 1;
+            return ret;
+        } else if(!strcmp(c1s(root)->name,"PLUS") ||!strcmp(c1s(root)->name,"MINUS")|| !strcmp(c1s(root)->name,"STAR") || !strcmp(c1s(root)->name,"DIV")){
+            Type a = checkExp(root->child);
+            Type b = checkExp(c1s2(root));
+            if(a==NULL||b==NULL) return NULL;
+            if(!sameType(a,b)){
+                printSemaError(7,c1s(root)->lineno,"");
+                return NULL;
+            }
+            return a;
+        } else if(!strcmp(c1s(root)->name,"LB")){
+            Type arr = checkExp(root->child);
+            Type index = checkExp(c1s2(root));
+            if(arr == NULL || index==NULL){return NULL;}
+            if(arr->kind != ARRAY){
+                printSemaError(10,root->child->lineno,"");   
+                return NULL;
+            }
+            if(index==NULL){return NULL;}
+            if(index->kind ==BASIC && index->u.basic == 1){
+                return arr->u.array.elem;
+            } else{
+                printSemaError(12,c1s2(root)->lineno,"");
+                return NULL;
+            }
+        } else if(!strcmp(c1s(root)->name,"DOT")){
+            Type str = checkExp(root->child);
+            if(str==NULL)return NULL;
+            if(str->kind!=STRUCTURE){
+                printSemaError(13,c1s(root)->lineno,"");
+                return NULL;
+            }
+            char* name = c1s2(root)->context;
+            FieldList findName = str->u.structure;
+            while(findName!=NULL){
+                if(!strcmp(findName->name,name)){
+                    return findName->type;
+                }
+                findName = findName->tail;
+            }
+            printSemaError(14,c1s2(root)->lineno,name);
+            return NULL;
+        }
+    } else if(!strcmp(root->child->name,"LP")){
+        return checkExp(c1s(root));
+    } else if(!strcmp(root->child->name,"MINUS")){
+        return checkExp(c1s(root));
+    } else if(!strcmp(root->child->name,"NOT")){
+        Type type = checkExp(c1s(root));
+        if(type==NULL) return NULL;
+        if(type->kind == BASIC && type->u.basic==1){return type;}
+        printSemaError(7,c1s(root)->lineno,"");
+        return NULL;
+    } else if(!strcmp(root->child->name,"ID")){
+        Symbol sym = hashFind(root->child);
+        if(c1s(root)!=NULL){//func
+            if(sym==NULL){
+                printSemaError(2,root->child->lineno,root->child->context);
+                return NULL;
+            }
+            if(!sym->isfunc || !sym->t.func->isDefined){
+                printSemaError(11,root->child->lineno,root->child->context);
+                return NULL;
+            }
+            if(c1s3(root)==NULL){
+                if(sym->t.func->agru ==NULL){
+                    return sym->t.func->returnType;
+                }
+                printSemaError(9,root->child->lineno,root->child->context);
+                return NULL;
+            }else{
+                Agru useType = getArgs(c1s2(root),NULL); 
+                Agru funType = sym->t.func->agru;
+                while(useType!=NULL || funType!=NULL){
+                    if(useType==NULL || funType==NULL){
+                        printSemaError(9,root->child->lineno,root->child->context);
+                        return NULL;
+                    }
+                    if(!sameType(useType->type,funType->type)){
+                        printSemaError(9,root->child->lineno,root->child->context);
+                        return NULL;
+                    }
+                    useType = useType->next;
+                    funType = funType->next;
+                }
+                return sym->t.func->returnType;
+            }
+        }else{
+            if(sym == NULL ||sym->isfunc){
+                printSemaError(1,root->child->lineno,root->child->context);
+                return NULL;
+            }
+            return sym->t.type;
+        }
+    } else if(!strcmp(root->child->name,"INT")){
+        Type ret = malloc(sizeof(struct Type_));
+        ret->kind = BASIC;
+        ret->u.basic = 1;
+        return ret;
+    } else if(!strcmp(root->name),"FLOAT"){
+        Type ret = malloc(sizeof(struct Type_));
+        ret->kind = BASIC;
+        ret->u.basic = 2;
+        return ret;
+    } else {
+        assert(0);
+    }
+}
+
+/**
+ * root: Exp in (EXP) ASSIGNOP EXP
+*/
+int isVarible(ast* root){
+    if(!strcmp(root->child->name,"ID") && c1s(root)==NULL){return 1;}
+    if(!strcmp(root->child->name,"Exp")){
+        if(!strcmp(c1s(root)->name,"LB") || !strcmp(c1s(root)->name,"DOT")){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * root: Args
+ * child: Exp COMMA Args
+ *      / Exp
+*/
+Agru getArgs(ast* root,Agru arg){
+    Agru nextArg = malloc(sizeof(struct Agru_));
+    nextArg->type = checkExp(root->child);
+    if(arg==NULL){
+        arg = nextArg;
+    }else{
+        arg->next = nextArg;
+    }
+    if(c1s(root)!=NULL){
+        getArgs(c1s2(root),nextArg);
+    }
+    return arg;
+}
+
+/**
+ * root:StmtList
+ * child: Stmt StmtList
+ *      | NULL
+*/
+void checkStmtList(ast* root, Symbol func){
+    if(root->child !=NULL){
+        checkStmt(root->child,func);
+        checkStmtList(c1s(root),func);
+    }
+}
+
+/**
+ * root: Stmt
+ * child: Exp SEMI
+ *     / Compst
+ *     / RETURN EXP SEMI
+ *    / IF LP Exp RP Stmt
+ *     / IF LP Exp RP Stmt ELSE Stmt
+ *    / WHILE LP EXP RP Stmt 
+*/
+void checkStmt(ast* root,Symbol func){
+    if(!strcmp(root->child->name,"Exp")){
+        checkExp(root->child);
+    } else if(!strcmp(root->child->name,"Compst")){
+        getCompst(root->child,func);
+    } else if(!strcmp(root->child->name,"RETURN")){
+        Type type = checkExp(c1s(root));
+        checkRet(func->t.func->returnType,type);
+    } else if(!strcmp(root->child->name,"IF")){
+        checkExp(c1s2(root));
+        checkStmt(c1s4(root),func);
+        if(c1s5(root)!=NULL){
+            checkStmt(c1s5(root)->sib,func);
+        }
+    } else if(!strcmp(root->child->name,"While")){
+        checkExp(c1s2(root));
+        checkStmt(c1s4(root),func);
+    } else {
+        assert(0);
+    }
+}
+
+void checkRet(Type a, Type b, int lineno){
+    if(!sameType(a,b)){
+        printSemaError(8,lineno,"");
+    }
 }
 
 void checkFunc(){
