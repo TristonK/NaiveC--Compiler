@@ -15,7 +15,7 @@ char* semaError[19] = {
     "\"%s\" is not an integer.\n", // 12
     "Illegal use of \".\"%s.\n", // 13
     "Non-existent field \"%s\".\n", // 14
-    "Redefined field \"%s\".\n", // 15
+    "Redefined field \"%s\" or try to initialize.\n", // 15
     "Duplicated name \"%s\".\n", // 16
     "Undefined structure \"%s\".\n", // 17
     "Undefined function \"%s\".\n", // 18

@@ -38,12 +38,13 @@ typedef struct FieldList_* FieldList;
 typedef struct Agru_* Agru;
 typedef struct Func_* Func;
 typedef struct Symbol_* Symbol;
+typedef struct Stack_* Stack;
 
 #define hashSize 0x3fff
 
 struct Type_
 {
-    enum {BASIC=1, ARRAY=3,STRUCTURE=4} kind;
+    enum {BASIC=1, ARRAY=3,STRUCTURE=4,STRCTDEF=5} kind;
     union 
     {
         int basic;// int:1 float:2
@@ -86,7 +87,17 @@ struct Symbol_
     }t;
     Symbol hashNext;
     Symbol stackNext;
+    int depth;
+    int isfunc;
 };
+
+struct Stack_
+{
+    int depth;
+    Stack lastEnv;
+    Symbol next;
+};
+
 
 // error.c
 void printSemaError(int type, int lineno, char* info);
@@ -94,12 +105,20 @@ void printSemaError(int type, int lineno, char* info);
 // hash.c
 unsigned int getHash(char* name);
 void createHash();
+void hashInsert(Symbol node);
+int hashDelete(Symbol node);
+int checkDup(char* name, int depth);
+Symbol FindStruct(ast* root);
+Symbol FindFunc(char* name);
 
 //envStack.c
 
+void createEnv();
 void pushStack();
-
 void popStack();
+void envInsert(Symbol toAdd);
+int getEnvdepth();
+Stack getEnv();
 
 //sematic.c
 #define c1s(x) x->child->sib
