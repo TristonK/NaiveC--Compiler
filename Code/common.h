@@ -1,5 +1,9 @@
-# include<stdio.h>
+#include<stdio.h>
 #include<stdlib.h>
+#include<assert.h>
+#include<string.h>
+
+//#define SEMABUG
 
 // lex
 
@@ -115,13 +119,15 @@ int hashDelete(Symbol node);
 Symbol hashFind(ast* root);
 int checkDup(char* name, int depth);
 Symbol FindStruct(ast* root);
-Symbol FindFunc(char* name);
+Symbol findFunc(char* name);
+void printAllSym();
 
 //envStack.c
 
 void createEnv();
-void pushStack();
-void popStack();
+void pushEnv();
+void popEnv();
+void clearEnv();
 void envInsert(Symbol toAdd);
 int getEnvdepth();
 Stack getEnv();
@@ -138,4 +144,30 @@ Stack getEnv();
 void semaAnalysis(ast* root);
 void getExtDef(ast* root);
 void checkExtDef(ast* extDef);
+Type getSpecifier(ast* root);
 Type getStructure(ast* root);
+FieldList getStructList(ast* root,FieldList field);
+FieldList getDef(ast* root,FieldList field);
+FieldList getDec(ast* root, FieldList field);
+void getExtDecList(ast* root, Type type);
+void getVarDec(ast* root, Type type);
+Symbol getArray(ast* root, Type type,int inStrcut);
+Symbol declareFunc(ast* root,Type type,int inDec);
+Agru getArg(ast* root, Agru arg);
+Type getParamDec(ast* root);
+int sameFunc(Func a, Func b);
+int sameType(Type a, Type b);
+void getFunc(ast* root, Type type);
+void getCompst(ast* root,Symbol func);
+void checkDefList(ast* root);
+void checkDef(ast* root);
+void checkDec(ast* root, Type type);
+Type checkExp(ast* root);
+int isVarible(ast* root);
+Agru getArgs(ast* root,Agru arg);
+void checkStmtList(ast* root, Symbol func);
+void checkStmt(ast* root,Symbol func);
+void checkRet(Type a, Type b, int lineno);
+void checkFunc();
+Symbol createSymbol(Type type, char* name);
+Symbol createFuncSymbol(Func func, char* name);

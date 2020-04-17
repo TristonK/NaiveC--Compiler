@@ -23,8 +23,9 @@ int main(int argc, char** argv){
         if(emptyFile){
             printf("Program (%d)\n", yylineno);
         }else{
-            printTree(root,0);
+            //printTree(root,0);
             //printf("end\n");
+            semaAnalysis(root);
         }
     }
     return 0;

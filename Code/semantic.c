@@ -3,7 +3,7 @@
 void semaAnalysis(ast* root){
     createHash();
     createEnv();
-    getExtDefList(root->child); //extDefList
+    getExtDef(root->child); //extDefList
     checkFunc();
 }
 
@@ -15,7 +15,7 @@ void semaAnalysis(ast* root){
 void getExtDef(ast* root){
     if(root!=NULL && root->child!=NULL){
         checkExtDef(root->child);
-        getExtDefList(root->sib);
+        getExtDef(root->child->sib);
     }
 }
 
@@ -29,10 +29,16 @@ void checkExtDef(ast* extDef){
     char* checkFlag = c1s(extDef)->name;
     if(!strcmp(checkFlag,"ExtDecList")){
         Type specifier = getSpecifier(extDef->child);
-        if(specifier==NULL){return;}
+        if(specifier->kind==STRCTDEF){specifier->kind=STRUCTURE;}
+        #ifdef SEMABUG
+        printf("enter extdeclist\n");
+        #endif
+        if(specifier==NULL){ 
+            return;
+        }
         getExtDecList(c1s(extDef),specifier);
     } else if(!strcmp(checkFlag,"SEMI")){
-        if(!strcmp(extDef->child->child->name,"StructSpecfier")){
+        if(!strcmp(extDef->child->child->name,"StructSpecifier")){
             if(!strcmp(extDef->child->child->child->sib->name,"Tag")){
                 /* cancled error form LiCong's word in 2020-03-29-22:04*
                 printSemaError(17, extDef->child->child->child->lineno, extDef->child->child->child->name);
@@ -44,10 +50,23 @@ void checkExtDef(ast* extDef){
     } else if(!strcmp(checkFlag,"FunDec")){
         Type specifier = getSpecifier(extDef->child);
         if(specifier==NULL){return;}
-        if(c1s2(extDef)!=NULL){
+        if(!strcmp(c1s2(extDef)->name,"CompSt")){
+            #ifdef SEMABUG
+            printf("go here1 %s\n",c1s2(extDef)->name);
+            #endif
             getFunc(c1s(extDef),specifier);
+            #ifdef SEMABUG
+            printAllSym();
+            #endif
         } else{ //just declaration
-            declareFunc(c1s(extDef),specifier);
+            #ifdef SEMABUG
+            printf("go here2\n");
+             #endif
+            pushEnv();
+            declareFunc(c1s(extDef),specifier,1);
+            #ifdef SEMABUG
+            printAllSym();
+            #endif
         }
     } else{
         fprintf(stderr,"Wrong Syn-Tree\n");
@@ -85,26 +104,45 @@ Type getStructure(ast* root){
     if(!strcmp(c1s(root)->name,"Tag")){
         Symbol id = FindStruct(c1s(root)->child); //Param:ID
         if(id==NULL){
-            printSemaError(17,c1s(root)->child->lineno,c1s(root)->child->name);
-            retrun NULL;
+            #ifdef SEMABUG
+            printAllSym();
+            #endif
+            printSemaError(17,c1s(root)->child->lineno,c1s(root)->child->context);
+            return NULL;
         }else{
             ret = id ->t.type;
         }
     } else{
+        #ifdef SEMABUG
+            printAllSym();
+        #endif
         ret = (Type)malloc(sizeof(struct Type_));
         ret->kind = STRCTDEF;
-        pushStack();
+        pushEnv();
         ret->u.structure = getStructList(c1s3(root),NULL);
-        if(ret->u.structure==NULL){return NULL;}
-        popStack();
+        if(ret->u.structure==NULL){
+            #ifdef SEMABUG
+            printf("NO ELE IN STRUCT\n");
+            #endif
+            return NULL;
+        }
+        popEnv();
+        #ifdef SEMABUG
+            printf("wtf\n");
+        #endif
         if(c1s(root)->child!=NULL){
-            if(checkDup(c1s(root)->name,getEnvdepth())==-1){
-                printSemaError(16,c1s(root)->child->lineno,c1s(root)->child->name);
+            if(checkDup(c1s(root)->child->context,getEnvdepth())==-1){
+                printSemaError(16,c1s(root)->child->lineno,c1s(root)->child->context);
                 return NULL;
             };
-            Symbol sym = createSymbol(ret,c1s(root)->child->name);
+            Symbol sym = createSymbol(ret,c1s(root)->child->context);
+            sym->t.type->kind = STRCTDEF;
             hashInsert(sym);
             envInsert(sym);
+            #ifdef SEMABUG
+            printf("shit\n");
+            printAllSym();
+            #endif
         }
     }
     return ret;
@@ -117,11 +155,19 @@ Type getStructure(ast* root){
 */
 FieldList getStructList(ast* root,FieldList field){
     if(root->child!=NULL){
+        if(field==NULL){
+            field = malloc(sizeof(struct FieldList_));
+        }
+        FieldList next = getDef(root->child,field);//返回一系列中最后一个    
+        if(next==NULL){
+            #ifdef SEMABUG
+            printf("shit getdef null in struct\n");
+            #endif
+            return NULL;
+        }
         FieldList newfield = malloc(sizeof(struct FieldList_));
-        FieldList next = getDef(root->child,field);    
-        if(next==NULL){return NULL;}
         next->tail = getStructList(c1s(root),newfield);
-        return newfield;
+        return field;
     }
     return NULL;
 }
@@ -133,7 +179,7 @@ FieldList getStructList(ast* root,FieldList field){
 
 FieldList getDef(ast* root,FieldList field){
     Type specifier = getSpecifier(root->child);
-    if(specifier==NULL){return;}
+    if(specifier==NULL){return NULL;}
     if(field==NULL){
         field = malloc(sizeof(struct FieldList_));
     }
@@ -150,6 +196,9 @@ FieldList getDef(ast* root,FieldList field){
 
 FieldList getDec(ast* root, FieldList field){
     Type type = field->type;
+    #ifdef SEMABUG
+    printf("hi shit %s\n",root->name);
+    #endif
     if(c1s(root->child)!=NULL){
         printSemaError(15,c1s(root->child)->lineno,"");
         return NULL;
@@ -159,7 +208,7 @@ FieldList getDec(ast* root, FieldList field){
             field->type = sym->t.type;
             field->name = sym->name;
         }else{
-            strcpy(field->name,root->child->child->child->context);
+            field->name = root->child->child->child->context;
             Symbol sym = createSymbol(field->type,field->name);
             if(checkDup(sym->name,sym->depth)==-1){
                 printSemaError(15,root->child->child->child->lineno,field->name);
@@ -167,6 +216,9 @@ FieldList getDec(ast* root, FieldList field){
             }
             hashInsert(sym);
             envInsert(sym);
+            #ifdef SEMABUG
+            printAllSym();
+            #endif
         }
     }
     if(c1s(root)!=NULL){
@@ -243,7 +295,10 @@ Symbol getArray(ast* root, Type type,int inStrcut){
 * child: ID LP VarList RP
 *      | ID LP RP
 */
-Symbol declareFunc(ast* root,Type type){
+Symbol declareFunc(ast* root,Type type,int inDec){
+    #ifdef SEMABUG
+        printf("Try to check function %s\n",root->child->context);
+    #endif
     Symbol checkf = findFunc(root->child->context);
     Func func = malloc(sizeof(struct Func_));
     func->returnType = type;
@@ -254,12 +309,19 @@ Symbol declareFunc(ast* root,Type type){
     }else{
         func->agru = NULL;
     }
+    if(inDec){
+        popEnv();
+    }
     if(checkf!=NULL){
+        if(checkf->isfunc && checkf->t.func->isDefined == 1 && !inDec){
+            printSemaError(4,func->lineno,root->child->context);
+            return NULL;
+        }
         if(!checkf->isfunc || !sameFunc(func,checkf->t.func)){
             printSemaError(19,func->lineno,root->child->context);
             return NULL;
         }
-        free(func);
+        //free(func);
         return checkf;
     }
     Symbol sym = createFuncSymbol(func,root->child->context);
@@ -294,6 +356,13 @@ Type getParamDec(ast* root){
         Symbol sym = getArray(c1s(root),type,0);
         return sym->t.type;
     }else{
+        if(checkDup(c1s(root)->child->context,getEnvdepth())==-1){
+                printSemaError(3,c1s(root)->child->lineno,c1s(root)->child->context);
+                return NULL;
+        };
+        Symbol sym = createSymbol(type,c1s(root)->child->context);
+        hashInsert(sym);
+        envInsert(sym);
         return type;
     }
 }
@@ -340,13 +409,17 @@ int sameType(Type a, Type b){
 
 /*
 * root: FunDec
+* child: ID LP VarList RP
+*       / ID LP RP
 */
 void getFunc(ast* root, Type type){
-    pushStack();
-    Symbol sym = declareFunc(root,type);
+    pushEnv();
+    Symbol sym = declareFunc(root,type,0);
+    if(sym==NULL) {popEnv();return;}
     sym->t.func->lineno = root->child->lineno;
     getCompst(root->sib,sym);
-    popStack();
+    sym->t.func->isDefined = 1;
+    popEnv();
 }
 
 
@@ -355,10 +428,10 @@ void getFunc(ast* root, Type type){
     * child: LC DefList StmtList RC
     */
 void getCompst(ast* root,Symbol func){
-    pushStack();
+    pushEnv();
     checkDefList(c1s(root));
     checkStmtList(c1s2(root),func);
-    popStack();
+    popEnv();
 }
 
 
@@ -381,7 +454,13 @@ void checkDefList(ast* root){
 
 void checkDef(ast* root){
     Type specifier = getSpecifier(root->child);
-    if(specifier==NULL){return;}
+    if(specifier==NULL){
+        #ifdef SEMABUG
+        printf("null specifier \n");
+        #endif
+        return;
+    }
+    if(specifier->kind==STRCTDEF){specifier->kind=STRUCTURE;}
     checkDec(c1s(root),specifier);
 }
 
@@ -403,18 +482,17 @@ void checkDec(ast* root, Type type){
         if(spec!=NULL && !sameType(spec,type)){
             printSemaError(5,c1s(root->child)->lineno,"");
         }
-    } else{
-        if(c1s(root->child->child)!=NULL){//array
-            Symbol sym = getArray(root->child->child,type,0);
-        }else{
-            Symbol sym = createSymbol(type,root->child->child->child->context);
-            if(checkDup(sym->name,sym->depth)==-1){
-                printSemaError(15,root->child->child->child->lineno,sym->name);
-                return NULL;
-            }
-            hashInsert(sym);
-            envInsert(sym);
+    }
+    if(c1s(root->child->child)!=NULL){//array
+        Symbol sym = getArray(root->child->child,type,0);
+    }else{
+        Symbol sym = createSymbol(type,root->child->child->child->context);
+        if(checkDup(sym->name,sym->depth)==-1){
+            printSemaError(3,root->child->child->child->lineno,sym->name);
+            return;
         }
+        hashInsert(sym);
+        envInsert(sym);
     }
     if(c1s(root)!=NULL){
         checkDec(c1s2(root),type);
@@ -577,7 +655,7 @@ Type checkExp(ast* root){
         ret->kind = BASIC;
         ret->u.basic = 1;
         return ret;
-    } else if(!strcmp(root->name),"FLOAT"){
+    } else if(!strcmp(root->child->name,"FLOAT")){
         Type ret = malloc(sizeof(struct Type_));
         ret->kind = BASIC;
         ret->u.basic = 2;
@@ -647,7 +725,7 @@ void checkStmt(ast* root,Symbol func){
         getCompst(root->child,func);
     } else if(!strcmp(root->child->name,"RETURN")){
         Type type = checkExp(c1s(root));
-        checkRet(func->t.func->returnType,type);
+        checkRet(func->t.func->returnType,type,root->child->lineno);
     } else if(!strcmp(root->child->name,"IF")){
         checkExp(c1s2(root));
         checkStmt(c1s4(root),func);
@@ -698,3 +776,4 @@ Symbol createFuncSymbol(Func func, char* name){
     ret->isfunc = 1;
     return ret;
 }
+

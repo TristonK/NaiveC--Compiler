@@ -104,3 +104,34 @@ Symbol FindStruct(ast* root){
     return ret;
 }
 
+void printSym(Symbol sym){
+    if(sym->isfunc){
+        printf("Func %s in depth %d\n",sym->name,sym->depth);
+    }else{
+        if(sym->t.type->kind == BASIC){
+            printf("Basic");
+        } else if(sym->t.type->kind == ARRAY){
+            printf("ARRAY");
+        } else if(sym->t.type->kind == STRCTDEF){
+            printf("def");
+        } else {
+            printf("struct");
+        }
+        printf("Variable %s in depth %d\n",sym->name,sym->depth);
+    }
+}
+
+
+void printAllSym(){
+    printf("\n********Here is all sym*******\n");
+    for(int i=0;i<hashSize;i++){
+        if(hashTable[i]!=NULL){
+            Symbol sym = hashTable[i];
+            while(sym!=NULL){
+                printSym(sym);
+                sym=sym->hashNext;
+            }
+        }
+    }
+    printf("*************END*************\n\n");
+}

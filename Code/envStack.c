@@ -16,6 +16,9 @@ void pushEnv(){
 }
 
 void popEnv(){
+    #ifdef SEMABUG
+    printf("now pop\n");
+    #endif
     Stack lastEnv = env->lastEnv;
     clearEnv();
     #ifdef FREEM
@@ -31,7 +34,9 @@ void clearEnv(){
         #ifdef FREEM
         freeSymbol(toFree);
         #endif
-        hashDelete(toFree);
+        if(!toFree->isfunc){
+            hashDelete(toFree);
+        }
         toFree = toFree->stackNext;
     }
 }
