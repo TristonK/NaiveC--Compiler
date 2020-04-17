@@ -160,7 +160,7 @@ Type getParamDec(ast* root);
 int sameFunc(Func a, Func b);
 int sameType(Type a, Type b);
 void getFunc(ast* root, Type type);
-void getCompst(ast* root,Symbol func);
+void getCompst(ast* root,Symbol func,int bigfunc);
 void checkDefList(ast* root);
 void checkDef(ast* root);
 void checkDec(ast* root, Type type);

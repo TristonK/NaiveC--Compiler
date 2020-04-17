@@ -26,6 +26,10 @@ void createHash(){
 }
 
 int checkDup(char* name, int depth){
+    #ifdef dupp
+    printf("try find %s in %d\n",name,depth);
+    printAllSym();
+    #endif
     unsigned int hashNum = getHash(name);
     Symbol checkDup = hashTable[hashNum];
     while(checkDup!=NULL){

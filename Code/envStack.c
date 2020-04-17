@@ -34,7 +34,7 @@ void clearEnv(){
         #ifdef FREEM
         freeSymbol(toFree);
         #endif
-        if(!toFree->isfunc){
+        if(!toFree->isfunc && !toFree->isdef){
             hashDelete(toFree);
         }
         toFree = toFree->stackNext;
