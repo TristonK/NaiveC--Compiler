@@ -29,7 +29,6 @@ void checkExtDef(ast* extDef){
     char* checkFlag = c1s(extDef)->name;
     if(!strcmp(checkFlag,"ExtDecList")){
         Type specifier = getSpecifier(extDef->child);
-        if(specifier->kind==STRCTDEF){specifier->kind=STRUCTURE;}
         #ifdef SEMABUG
         printf("enter extdeclist\n");
         #endif
@@ -117,26 +116,30 @@ Type getStructure(ast* root){
             printAllSym();
         #endif
         ret = (Type)malloc(sizeof(struct Type_));
-        ret->kind = STRCTDEF;
+        //ret->kind = STRCTDEF;
+        ret->kind = STRUCTURE;
         pushEnv();
         ret->u.structure = getStructList(c1s3(root),NULL);
         if(ret->u.structure==NULL){
             #ifdef SEMABUG
             printf("NO ELE IN STRUCT\n");
             #endif
+            popEnv();
             return NULL;
         }
-        popEnv();
-        #ifdef SEMABUG
-            printf("wtf\n");
-        #endif
         if(c1s(root)->child!=NULL){
-            if(checkDup(c1s(root)->child->context,getEnvdepth())==-1){
+            if(missDepthDup(c1s(root)->child->context,getEnvdepth())==-1){
                 printSemaError(16,c1s(root)->child->lineno,c1s(root)->child->context);
+                popEnv();
                 return NULL;
             };
+        }
+        popEnv();
+        if(c1s(root)->child!=NULL){
             Symbol sym = createSymbol(ret,c1s(root)->child->context);
-            sym->t.type->kind = STRCTDEF;
+            //sym->t.type->kind = STRCTDEF;
+            sym->t.type->kind = STRUCTURE;
+            sym->isdef = 1;
             hashInsert(sym);
             envInsert(sym);
             #ifdef SEMABUG
@@ -201,25 +204,24 @@ FieldList getDec(ast* root, FieldList field){
     #endif
     if(c1s(root->child)!=NULL){
         printSemaError(15,c1s(root->child)->lineno,"");
-        return NULL;
-    } else{
-        if(c1s(root->child->child)!=NULL){//array
-            Symbol sym = getArray(root->child->child,field->type,1);
-            field->type = sym->t.type;
-            field->name = sym->name;
-        }else{
-            field->name = root->child->child->child->context;
-            Symbol sym = createSymbol(field->type,field->name);
-            if(checkDup(sym->name,sym->depth)==-1){
-                printSemaError(15,root->child->child->child->lineno,field->name);
-                return NULL;
-            }
-            hashInsert(sym);
-            envInsert(sym);
-            #ifdef SEMABUG
-            printAllSym();
-            #endif
+        //return NULL;
+    } 
+    if(c1s(root->child->child)!=NULL){//array
+        Symbol sym = getArray(root->child->child,field->type,1);
+        field->type = sym->t.type;
+        field->name = sym->name;
+    }else{
+        field->name = root->child->child->child->context;
+        Symbol sym = createSymbol(field->type,field->name);
+        if(checkDup(sym->name,sym->depth)==-1){
+            printSemaError(15,root->child->child->child->lineno,field->name);
+            return NULL;
         }
+        hashInsert(sym);
+        envInsert(sym);
+        #ifdef SEMABUG
+        printAllSym();
+        #endif
     }
     if(c1s(root)!=NULL){
         FieldList newfield = malloc(sizeof(struct FieldList_));
@@ -269,9 +271,11 @@ void getVarDec(ast* root, Type type){
 */
 Symbol getArray(ast* root, Type type,int inStrcut){
     Type newarray = malloc(sizeof(struct Type_));
-    newarray->kind = ARRAY;
-    newarray->u.array.elem = type;
+    #ifdef SEMABUG
+    printf("array %d\n",type->kind);
+    #endif
     if(!strcmp(root->child->name,"ID")){
+        newarray = type;
         Symbol sym = createSymbol(newarray,root->child->context);
         if(checkDup(sym->name,sym->depth)==-1){
             if(inStrcut){
@@ -285,6 +289,8 @@ Symbol getArray(ast* root, Type type,int inStrcut){
         envInsert(sym);
         return sym;
     }else{
+        newarray->kind = ARRAY;
+        newarray->u.array.elem = type;
         newarray->u.array.size = c1s2(root)->val.intVal;
         getArray(root->child,newarray,inStrcut);
     }
@@ -298,11 +304,17 @@ Symbol getArray(ast* root, Type type,int inStrcut){
 Symbol declareFunc(ast* root,Type type,int inDec){
     #ifdef SEMABUG
         printf("Try to check function %s\n",root->child->context);
+        printAllSym();
     #endif
     Symbol checkf = findFunc(root->child->context);
     Func func = malloc(sizeof(struct Func_));
     func->returnType = type;
-    func->isDefined = 0;
+    if(!inDec && func->isDefined==0){
+        func->isDefined = 1;
+    }
+    if(inDec && func->isDefined!=1){
+        func->isDefined = 0;
+    }
     func->lineno = root->child->lineno; 
     if(!strcmp(c1s2(root)->name,"VarList")){
         func->agru = getArg(c1s2(root),NULL);
@@ -312,19 +324,24 @@ Symbol declareFunc(ast* root,Type type,int inDec){
     if(inDec){
         popEnv();
     }
+    Symbol sym = createFuncSymbol(func,root->child->context);
     if(checkf!=NULL){
         if(checkf->isfunc && checkf->t.func->isDefined == 1 && !inDec){
             printSemaError(4,func->lineno,root->child->context);
-            return NULL;
+            return sym;
         }
         if(!checkf->isfunc || !sameFunc(func,checkf->t.func)){
+            if(checkf->isfunc && !inDec){
+                checkf->t.func->isDefined = 1;
+            }
+            //checkf->t.func = func;
             printSemaError(19,func->lineno,root->child->context);
-            return NULL;
+            return sym;
         }
         //free(func);
         return checkf;
     }
-    Symbol sym = createFuncSymbol(func,root->child->context);
+    
     hashInsert(sym);
     envInsert(sym);
     return sym;
@@ -460,7 +477,12 @@ void checkDef(ast* root){
         #endif
         return;
     }
-    if(specifier->kind==STRCTDEF){specifier->kind=STRUCTURE;}
+    //Type ret;
+    /*if(specifier->kind==STRCTDEF){
+        ret = malloc(sizeof(struct Type_));
+        ret->u.structure = specifier->u.structure;
+        ret->kind=STRUCTURE;
+    }else{ret=specifier;}*/
     checkDec(c1s(root),specifier);
 }
 
@@ -525,8 +547,13 @@ Type checkExp(ast* root){
     if(!strcmp(root->child->name,"Exp")){
         if(!strcmp(c1s(root)->name,"ASSIGNOP")){
             Type a = checkExp(root->child);
+            #ifdef SEMABUG
+            printf("enter =\n");
+            #endif
             Type b = checkExp(c1s2(root));
-            if(a==NULL||b==NULL) return NULL;
+            if(a==NULL||b==NULL) {
+                return NULL;
+            }
             if(!sameType(a,b)){
                 printSemaError(5,c1s(root)->lineno,"");
                 return NULL;
@@ -569,7 +596,12 @@ Type checkExp(ast* root){
         } else if(!strcmp(c1s(root)->name,"LB")){
             Type arr = checkExp(root->child);
             Type index = checkExp(c1s2(root));
-            if(arr == NULL || index==NULL){return NULL;}
+            if(arr == NULL || index==NULL){
+                #ifdef SEMABUG
+                printf("arr is null or index is null\n");
+                #endif
+                return NULL;
+            }
             if(arr->kind != ARRAY){
                 printSemaError(10,root->child->lineno,"");   
                 return NULL;
@@ -616,7 +648,7 @@ Type checkExp(ast* root){
                 printSemaError(2,root->child->lineno,root->child->context);
                 return NULL;
             }
-            if(!sym->isfunc || !sym->t.func->isDefined){
+            if(!sym->isfunc){
                 printSemaError(11,root->child->lineno,root->child->context);
                 return NULL;
             }
@@ -721,21 +753,35 @@ void checkStmtList(ast* root, Symbol func){
 void checkStmt(ast* root,Symbol func){
     if(!strcmp(root->child->name,"Exp")){
         checkExp(root->child);
-    } else if(!strcmp(root->child->name,"Compst")){
+    } else if(!strcmp(root->child->name,"CompSt")){
         getCompst(root->child,func);
     } else if(!strcmp(root->child->name,"RETURN")){
         Type type = checkExp(c1s(root));
         checkRet(func->t.func->returnType,type,root->child->lineno);
     } else if(!strcmp(root->child->name,"IF")){
-        checkExp(c1s2(root));
+        Type cond = checkExp(c1s2(root));
+        if(cond!=NULL){
+            if(cond->kind!=BASIC ||  (cond->kind ==BASIC && cond->u.basic!=1)){
+                printSemaError(7,c1s2(root)->lineno,"");
+            }
+        }
         checkStmt(c1s4(root),func);
         if(c1s5(root)!=NULL){
             checkStmt(c1s5(root)->sib,func);
         }
-    } else if(!strcmp(root->child->name,"While")){
-        checkExp(c1s2(root));
+    } else if(!strcmp(root->child->name,"WHILE")){
+        Type cond = checkExp(c1s2(root));
+        if(cond!=NULL){
+            if(cond->kind!=BASIC || (cond->kind ==BASIC && cond->u.basic!=1)){
+                printSemaError(7,c1s2(root)->lineno,"");
+            }
+        }
         checkStmt(c1s4(root),func);
+        #ifdef SEMABUG
+        printf("quit while\n");
+        #endif
     } else {
+        printf("%s\n",root->child->name);
         assert(0);
     }
 }
@@ -766,6 +812,7 @@ Symbol createSymbol(Type type, char* name){
     ret->t.type = type;
     ret->isfunc = 0;
     ret->depth = getEnvdepth();
+    ret->isdef = 0;
     return ret;
 }
 
@@ -774,6 +821,7 @@ Symbol createFuncSymbol(Func func, char* name){
     ret->name = name;
     ret->t.func = func;
     ret->isfunc = 1;
+    ret->isdef = 0;
     return ret;
 }
 

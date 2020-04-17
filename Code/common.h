@@ -94,6 +94,7 @@ struct Symbol_
     Symbol stackNext;
     int depth;
     int isfunc;
+    int isdef;
 };
 
 struct Stack_
@@ -121,6 +122,7 @@ int checkDup(char* name, int depth);
 Symbol FindStruct(ast* root);
 Symbol findFunc(char* name);
 void printAllSym();
+int missDepthDup(char* name, int depth);
 
 //envStack.c
 
