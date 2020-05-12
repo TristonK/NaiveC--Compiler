@@ -173,3 +173,55 @@ void checkRet(Type a, Type b, int lineno);
 void checkFunc();
 Symbol createSymbol(Type type, char* name);
 Symbol createFuncSymbol(Func func, char* name);
+
+
+// IR.c
+
+int temp_gen;
+
+typedef struct Operand_* Operand;
+typedef struct InterCodes_* InterCodes;
+typedef struct InterCode InterCode;
+
+struct Operand_
+{
+    enum {OP_VARIABLE,OP_CONSTANT,OP_ADDRESS,OP_FUNC,OP_LABEL,OP_RELOP} kind;
+    union{
+        int var_no;
+        int value;
+        char* name;
+    }u;
+};
+
+struct InterCode{
+    enum{
+        CODE_ASSIGN=0,
+        CODE_LABEL,
+        CODE_REF,CODE_DEREF,CODE_DEREF_ASSIGN,
+        CODE_ADD,CODE_SUB,CODE_MUL,CODE_DIV,
+        CODE_FUNC,CODE_PARAM,CODE_ARG,CODE_RETURN,CODE_CALL,
+        CODE_READ,CODE_WRITE,
+        CODE_IF,CODE_GOTO,
+        CODE_DEC
+        } kind;
+    union{
+        struct{Operand right,left;} assign;
+        struct{Operand result,op1,op2;}binop;
+        struct{Operand left,relop,right,label;} if_op;
+        struct{Operand result;} single_op;
+    }u;
+};
+
+struct InterCodes_{
+    InterCode code;
+    InterCodes prev,next;
+};
+
+void IrAnalysis(ast* root);
+
+InterCodes ir_root;
+InterCodes ir_tail;
+
+//ir_file.c
+
+void printIRCode(FILE* out);

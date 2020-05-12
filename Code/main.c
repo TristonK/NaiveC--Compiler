@@ -8,6 +8,8 @@ extern int emptyFile;
 //extern int emptyeof;
 extern int yylineno;
 
+FILE *ir_out;
+
 int main(int argc, char** argv){
     if(argc>1){
         if(!(yyin = fopen(argv[1],"r"))){
@@ -25,7 +27,9 @@ int main(int argc, char** argv){
         }else{
             //printTree(root,0);
             //printf("end\n");
-            semaAnalysis(root);
+            //semaAnalysis(root);
+            IrAnalysis(root);
+            printIRCode(ir_out);
         }
     }
     return 0;
