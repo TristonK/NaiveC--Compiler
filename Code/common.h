@@ -178,14 +178,16 @@ Symbol createFuncSymbol(Func func, char* name);
 // IR.c
 
 int temp_gen;
+int label_gen;
 
 typedef struct Operand_* Operand;
 typedef struct InterCodes_* InterCodes;
 typedef struct InterCode InterCode;
+typedef struct ArgList_* ArgList;
 
 struct Operand_
 {
-    enum {OP_VARIABLE,OP_CONSTANT,OP_ADDRESS,OP_FUNC,OP_LABEL,OP_RELOP} kind;
+    enum {OP_VARIABLE,OP_CONSTANT,OP_ADDRESS,OP_FUNC,OP_LABEL,OP_RELOP,OP_MATH} kind;
     union{
         int var_no;
         int value;
@@ -215,6 +217,11 @@ struct InterCode{
 struct InterCodes_{
     InterCode code;
     InterCodes prev,next;
+};
+
+struct ArgList_{
+    Operand arg;
+    ArgList next;
 };
 
 void IrAnalysis(ast* root);

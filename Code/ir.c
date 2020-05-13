@@ -3,6 +3,8 @@
 void IrAnalysis(ast* root){
     createHash();
     createEnv();
+    temp_gen = 1;
+    label_gen = 1;
     ir_root = malloc(sizeof(InterCodes));
     ir_tail = ir_root;
     irExtDefList(root->child); //extDefList
@@ -336,57 +338,57 @@ void irDec(ast* root, Type type){
 Type irExp(ast* root,Operand place){
     if(!strcmp(root->child->name,"Exp")){
         if(!strcmp(c1s(root)->name,"ASSIGNOP")){
-            Type a = irExp(root->child);
-            Type b = irExp(c1s2(root));
-            if(a==NULL||b==NULL) {
-                return NULL;
+            if(!strcmp(root->child->child->name,"ID" && c1s(root)==NULL)){
+                Operand t1 = irOpTemp();
+                irExp(c1s2(root),t1);
+                irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
+                irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+            } else if(!strcmp(c1s(root),"LB")){
+
+            } else if(!strcmp(c1s(root),"DOT")){
+
             }
-            if(!sameType(a,b)){
-                printSemaError(5,c1s(root)->lineno,"");
-                return NULL;
-            } else{
-                if(!isVarible(root->child)){
-                    printSemaError(6,c1s(root)->lineno,"");
-                    return NULL;
-                }
-                return a;
-            }
-        } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")){
-            Type a = checkExp(root->child);
-            Type b = checkExp(c1s2(root));
-            if(a==NULL||b==NULL) return NULL;
-            if(sameType(a,b) && a->kind == BASIC && a->u.basic == 1){
-                return a;
-            }
-            printSemaError(7,c1s(root)->lineno,"");
-        } else if(!strcmp(c1s(root)->name,"RELOP")){
-            Type a = checkExp(root->child);
-            Type b = checkExp(c1s2(root));
-            if(a==NULL||b==NULL) return NULL;
-            if(!sameType(a,b)){
-                printSemaError(7,c1s(root)->lineno,"");
-                return NULL;
-            }
-            Type ret = malloc(sizeof(struct Type_));
-            ret->kind = BASIC;
-            ret->u.basic = 1;
-            return ret;
-        } else if(!strcmp(c1s(root)->name,"PLUS") ||!strcmp(c1s(root)->name,"MINUS")|| !strcmp(c1s(root)->name,"STAR") || !strcmp(c1s(root)->name,"DIV")){
-            Type a = checkExp(root->child);
-            Type b = checkExp(c1s2(root));
-            if(a==NULL||b==NULL) return NULL;
-            if(!sameType(a,b)){
-                printSemaError(7,c1s(root)->lineno,"");
-                return NULL;
-            }
-            return a;
+        } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")||!strcmp(c1s(root)->name,"RELOP")|| !strcmp(root->child->name,"NOT")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+            irCond(root,t1,t2);
+            irCodeOp1(CODE_LABEL,t1);
+            irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
+            irCodeOp1(CODE_LABEL,t2);
+        } else if(!strcmp(c1s(root)->name,"PLUS")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            irCodeOp3(CODE_ADD,place,t1,t2);
+        } else if( !strcmp(c1s(root)->name,"MINUS")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            irCodeOp3(CODE_SUB,place,t1,t2);
+        }else if( !strcmp(c1s(root)->name,"STAR")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            irCodeOp3(CODE_MUL,place,t1,t2);
+        } else if( !strcmp(c1s(root)->name,"DIV")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            irCodeOp3(CODE_DIV,place,t1,t2);
         } else if(!strcmp(c1s(root)->name,"LB")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            /*
             Type arr = checkExp(root->child);
             Type index = checkExp(c1s2(root));
             if(arr == NULL || index==NULL){
-                #ifdef SEMABUG
-                printf("arr is null or index is null\n");
-                #endif
                 return NULL;
             }
             if(arr->kind != ARRAY){
@@ -399,9 +401,9 @@ Type irExp(ast* root,Operand place){
             } else{
                 printSemaError(12,c1s2(root)->lineno,"");
                 return NULL;
-            }
+            }*/
         } else if(!strcmp(c1s(root)->name,"DOT")){
-            Type str = checkExp(root->child);
+            /*Type str = checkExp(root->child);
             if(str==NULL)return NULL;
             if(str->kind!=STRUCTURE){
                 printSemaError(13,c1s(root)->lineno,"");
@@ -416,64 +418,50 @@ Type irExp(ast* root,Operand place){
                 findName = findName->tail;
             }
             printSemaError(14,c1s2(root)->lineno,name);
-            return NULL;
+            return NULL;*/
         }
     } else if(!strcmp(root->child->name,"LP")){
-        return checkExp(c1s(root));
+        return irExp(c1s(root),place);
     } else if(!strcmp(root->child->name,"MINUS")){
-        return checkExp(c1s(root));
-    } else if(!strcmp(root->child->name,"NOT")){
-        Type type = checkExp(c1s(root));
-        if(type==NULL) return NULL;
-        if(type->kind == BASIC && type->u.basic==1){return type;}
-        printSemaError(7,c1s(root)->lineno,"");
-        return NULL;
+        Operand t1 = irOpTemp();
+        irExp(c1s(root),t1);
+        irCodeOp3(CODE_SUB,place,irOpConstant(0),t1);
     } else if(!strcmp(root->child->name,"ID")){
         Symbol sym = hashFind(root->child);
-        if(c1s(root)!=NULL){//func
-            if(sym==NULL){
-                printSemaError(2,root->child->lineno,root->child->context);
-                return NULL;
-            }
-            if(!sym->isfunc){
-                printSemaError(11,root->child->lineno,root->child->context);
-                return NULL;
-            }
+        if(c1s(root)!=NULL){//function
             if(c1s3(root)==NULL){
-                if(sym->t.func->agru ==NULL){
-                    return sym->t.func->returnType;
+                // no args
+                if(!strcmp(root->child->context,"read")){
+                    irCodeOp1(CODE_READ,place);
+                } else{
+                    irCodeOp2(CODE_CALL,place,irOpFunc(root->child->context));
                 }
-                printSemaError(9,root->child->lineno,root->child->context);
-                return NULL;
+                return sym->t.func->returnType;
             }else{
-                Agru useType = getArgs(c1s2(root),NULL); 
-                Agru funType = sym->t.func->agru;
-                while(useType!=NULL || funType!=NULL){
-                    if(useType==NULL || funType==NULL){
-                        printSemaError(9,root->child->lineno,root->child->context);
-                        return NULL;
+                ArgList arg_list = irTransArgs(c1s2(root),NULL);
+                if(!strcmp(root->child->context,"write")){
+                    irCodeOp1(CODE_WRITE,arg_list->arg);
+                    if(place!=NULL)
+                        irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+                }else{
+                    while(arg_list!=NULL){
+                        irCodeOp1(CODE_ARG,arg_list->arg);
+                        arg_list = arg_list->next;
                     }
-                    if(!sameType(useType->type,funType->type)){
-                        printSemaError(9,root->child->lineno,root->child->context);
-                        return NULL;
+                    if(place!=NULL){
+                        irCodeOp2(CODE_CALL,place,irOpFunc(sym->name));
+                    } else{
+                        irCodeOp2(CODE_CALL,irOpTemp(),irOpFunc(sym->name));
                     }
-                    useType = useType->next;
-                    funType = funType->next;
                 }
                 return sym->t.func->returnType;
             }
         }else{
-            if(sym == NULL ||sym->isfunc || sym->isdef){
-                printSemaError(1,root->child->lineno,root->child->context);
-                return NULL;
-            }
+            irCodeOp2(CODE_ASSIGN,place,irOpVar(sym->name));
             return sym->t.type;
         }
     } else if(!strcmp(root->child->name,"INT")){
-        Type ret = malloc(sizeof(struct Type_));
-        ret->kind = BASIC;
-        ret->u.basic = 1;
-        return ret;
+        irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->val.intVal));
     } else if(!strcmp(root->child->name,"FLOAT")){
         Type ret = malloc(sizeof(struct Type_));
         ret->kind = BASIC;
@@ -482,7 +470,46 @@ Type irExp(ast* root,Operand place){
     } else {
         assert(0);
     }
+    Type ret = malloc(sizeof(struct Type_));
+    ret->kind = BASIC;
+    ret->u.basic = 1;
+    return ret;
 }
+
+
+void irCond(ast* root, Operand label_true, Operand label_false){
+    if(!strcmp(root->child->name,"EXP")){
+        if(!strcmp(c1s(root)->name,"RELOP")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            irExp(root->child,t1);
+            irExp(c1s2(root),t2);
+            irCodeOp4(CODE_IF,t1,irOpRelop(c1s(root)->context),t2,label_true);
+            irCodeOp1(CODE_GOTO,label_false);
+            return;
+        } else if(!strcmp(c1s(root)->name,"AND")){
+            Operand label1 = irOpLabel();
+            irCond(root->child,label1,label_false);
+            irCodeOp1(CODE_LABEL,label1);
+            irCond(c1s2(root),label_true,label_false);
+            return;
+        } else if(!strcmp(c1s(root)->name,"OR")){
+            Operand label1 = irOpLabel();
+            irCond(root->child,label1,label_true);
+            irCodeOp1(CODE_LABEL,label1);
+            irCond(c1s2(root),label_true,label_false);
+            return;
+        } 
+    } else if(!strcmp(root->child->name,"NOT")){
+        irCond(c1s(root),label_false,label_true);
+        return;
+    } 
+    Operand t1 = irOpTemp();
+    irExp(root,t1);
+    irCodeOp4(CODE_IF,t1,irOpRelop("!="),irOpConstant(0), label_true);
+    irCodeOp1(CODE_GOTO,label_false);
+}
+
 
 /**
  * root: Exp in (EXP) ASSIGNOP EXP
@@ -502,18 +529,16 @@ int isVarible(ast* root){
  * child: Exp COMMA Args
  *      / Exp
 */
-Agru getArgs(ast* root,Agru arg){
-    Agru nextArg = malloc(sizeof(struct Agru_));
-    nextArg->type = checkExp(root->child);
-    if(arg==NULL){
-        arg = nextArg;
-    }else{
-        arg->next = nextArg;
-    }
+ArgList irTransArgs(ast* root,ArgList arg_list){
+    Operand t1 = irOpTemp();
+    irExp(root->child,t1);
+    ArgList n_t1 = malloc(sizeof(struct ArgList_));
+    n_t1->arg = t1;
+    n_t1->next = arg_list;
     if(c1s(root)!=NULL){
-        getArgs(c1s2(root),nextArg);
+        return irTransArgs(c1s2(root),n_t1);
     }
-    return arg;
+    return n_t1;
 }
 
 /**
@@ -521,10 +546,10 @@ Agru getArgs(ast* root,Agru arg){
  * child: Stmt StmtList
  *      | NULL
 */
-void checkStmtList(ast* root, Symbol func){
+void irStmtList(ast* root, Symbol func){
     if(root->child !=NULL){
-        checkStmt(root->child,func);
-        checkStmtList(c1s(root),func);
+        irStmt(root->child,func);
+        irStmtList(c1s(root),func);
     }
 }
 
@@ -537,47 +562,48 @@ void checkStmtList(ast* root, Symbol func){
  *     / IF LP Exp RP Stmt ELSE Stmt
  *    / WHILE LP EXP RP Stmt 
 */
-void checkStmt(ast* root,Symbol func){
+void irStmt(ast* root,Symbol func){
     if(!strcmp(root->child->name,"Exp")){
-        checkExp(root->child);
+        irExp(root->child,NULL);
     } else if(!strcmp(root->child->name,"CompSt")){
-        getCompst(root->child,func,0);
+        irCompst(root->child,func);
     } else if(!strcmp(root->child->name,"RETURN")){
-        Type type = checkExp(c1s(root));
-        checkRet(func->t.func->returnType,type,root->child->lineno);
+        Operand t1 = irOpTemp();
+        irExp(c1s(root),t1);
+        irCodeOp1(CODE_RETURN,t1);
     } else if(!strcmp(root->child->name,"IF")){
-        Type cond = checkExp(c1s2(root));
-        if(cond!=NULL){
-            if(cond->kind!=BASIC ||  (cond->kind ==BASIC && cond->u.basic!=1)){
-                printSemaError(7,c1s2(root)->lineno,"");
-            }
-        }
-        checkStmt(c1s4(root),func);
         if(c1s5(root)!=NULL){
-            checkStmt(c1s5(root)->sib,func);
+            Operand label1 = irOpLabel();
+            Operand label2 = irOpLabel();
+            Operand label3 = irOpLabel();
+            irCond(c1s2(root),label1,label2);
+            irCodeOp1(CODE_LABEL,label1);
+            irStmt(c1s4(root),func);
+            irCodeOp1(CODE_GOTO,label3);
+            irCodeOp1(CODE_LABEL,label2);
+            irStmt(c1s5(root)->sib,func);
+            irCodeOp1(CODE_LABEL,label3);
+        }else{
+            Operand label1 = irOpLabel();
+            Operand label2 = irOpLabel();
+            irCond(c1s2(root),label1,label2);
+            irCodeOp1(CODE_LABEL,label1);
+            irStmt(c1s4(root),func);
+            irCodeOp2(CODE_LABEL,label2);
         }
     } else if(!strcmp(root->child->name,"WHILE")){
-        Type cond = checkExp(c1s2(root));
-        if(cond!=NULL){
-            if(cond->kind!=BASIC || (cond->kind ==BASIC && cond->u.basic!=1)){
-                printSemaError(7,c1s2(root)->lineno,"");
-            }
-        }
-        checkStmt(c1s4(root),func);
-        #ifdef SEMABUG
-        printf("quit while\n");
-        #endif
-    } else {
-        printf("%s\n",root->child->name);
-        assert(0);
+        Operand label1 = irOpLabel();
+        Operand label2 = irOpLabel();
+        Operand label3 = irOpLabel();
+        irCodeOp1(CODE_LABEL,label1);
+        irCond(c1s2(root),label2,label3);
+        irCodeOp1(CODE_LABEL,label2);
+        irStmt(c1s4(root),func);
+        irCodeOp1(CODE_GOTO,label1);
+        irCodeOp1(CODE_LABEL,label3);
     }
 }
 
-void checkRet(Type a, Type b, int lineno){
-    if(!sameType(a,b)){
-        printSemaError(8,lineno,"");
-    }
-}
 
 
 /*type*/
@@ -647,6 +673,54 @@ Operand irOpTemp(){
     strcpy(temp,t);
     strcat(temp,tp);
     temp_gen ++;
+    new_op->u.name = temp;
+    return new_op;
+}
+
+Operand irOpOp(char* op){
+    Operand new_op = malloc(sizeof(struct Operand_));
+    new_op->kind = OP_MATH;
+    new_op->u.name = malloc(4);
+    if(!strcmp(op,"ADD")){
+        strcpy(new_op->u.name,"+");
+    } else if(!strcmp(op,"SUB")){
+        strcpy(new_op->u.name,"-");
+    } else if(!strcmp(op,"MUL")){
+        strcpy(new_op->u.name,"*");
+    } else  {
+        strcpy(new_op->u.name,"/");
+    }
+    return new_op;
+}
+
+Operand irOpRelop(char* relop){
+    Operand new_op = malloc(sizeof(struct Operand_));
+    new_op->kind = OP_RELOP;
+    strcpy(new_op->u.name,relop);
+    return new_op;
+}
+
+Operand irOpLabel(){
+    Operand new_op = malloc(sizeof(struct Operand_));
+    new_op->kind = OP_LABEL;
+    char tmp[16];
+    char tp[16];
+    char t[2] = "l"; 
+    char zm[11]="0123456789";
+    int tmp_num = label_gen;
+    int i=-1;
+    while(tmp_num!=0){
+        i++;
+        tmp[i] = zm[tmp_num%10];
+        tmp_num /= 10;
+    }
+    for(int j=0;i>=0;i--,j++){
+        tp[j]=tmp[i-1];
+    }
+    char* temp = malloc(strlen(tp)+2);
+    strcpy(temp,t);
+    strcat(temp,tp);
+    label_gen ++;
     new_op->u.name = temp;
     return new_op;
 }
