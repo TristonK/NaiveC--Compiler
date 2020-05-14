@@ -7,7 +7,7 @@ char* printOperand(Operand op){
         return op->u.name;
     }
     char* ret = malloc(sizeof(char)*16);
-    sprintf("#%d",op->u.value);
+    sprintf(ret,"#%d",op->u.value);
     return ret;
 }
 
@@ -51,13 +51,13 @@ char* printIRCode(InterCode *code){
         sprintf(buf,"FUNCTION %s :\n",printOperand(code->u.single_op.result));
         break;
     case CODE_PARAM:
-        sprintf(buf,"PARAM %s :\n",printOperand(code->u.single_op.result));
+        sprintf(buf,"PARAM %s\n",printOperand(code->u.single_op.result));
         break;
     case CODE_ARG:
-        sprintf(buf,"ARG %s :\n",printOperand(code->u.single_op.result));
+        sprintf(buf,"ARG %s\n",printOperand(code->u.single_op.result));
         break;
     case CODE_RETURN:
-        sprintf(buf,"RETURN %s :\n",printOperand(code->u.single_op.result));
+        sprintf(buf,"RETURN %s\n",printOperand(code->u.single_op.result));
         break;
     case CODE_CALL:
         sprintf(buf,"%s := CALL %s\n",printOperand(code->u.assign.left),printOperand(code->u.assign.right));
@@ -77,12 +77,14 @@ char* printIRCode(InterCode *code){
     default:
         break;
     }
+    return buf;
 }
 
 void printIRCodes(FILE* out){
-    InterCodes head = ir_root;
+    InterCodes head = ir_root->next;
     while(head!=NULL){
-        fprintf(out,"%s",printIRCode(&(head->code)));
+        char* ret = printIRCode(&(head->code));
+        fprintf(ir_out,"%s",ret);
         head = head->next;
     }
 }

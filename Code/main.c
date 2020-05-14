@@ -8,7 +8,7 @@ extern int emptyFile;
 //extern int emptyeof;
 extern int yylineno;
 
-FILE *ir_out;
+extern FILE *ir_out;
 
 int main(int argc, char** argv){
     if(argc>1){
@@ -18,6 +18,10 @@ int main(int argc, char** argv){
         }
         yyrestart(yyin);
     } else{return 1;}
+    if(!(ir_out = fopen(argv[2],"w"))){
+        perror(argv[2]);
+        return 1;
+    }
     root = malloc(sizeof(ast));
     //yydebug = 1;
     yyparse();

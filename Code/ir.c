@@ -237,7 +237,7 @@ Type irParamDec(ast* root){
     Type type = getSpecifier(root->child);
     if(c1s(c1s(root))!=NULL){
         Symbol sym = irGetArray(c1s(root),type,0);
-        irCodeOp1(CODE_PARAM,sym->name);
+        irCodeOp1(CODE_PARAM,irOpVar(sym->name));
         return sym->t.type;
     }else{
         Symbol sym = createSymbol(type,c1s(root)->child->context);
@@ -338,14 +338,15 @@ void irDec(ast* root, Type type){
 Type irExp(ast* root,Operand place){
     if(!strcmp(root->child->name,"Exp")){
         if(!strcmp(c1s(root)->name,"ASSIGNOP")){
-            if(!strcmp(root->child->child->name,"ID" && c1s(root)==NULL)){
+            if(!strcmp(root->child->child->name,"ID") && c1s(root->child)==NULL){
                 Operand t1 = irOpTemp();
                 irExp(c1s2(root),t1);
                 irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
                 if(place!=NULL){
                     irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
                 }
-            } else if(!strcmp(c1s(root),"LB")){
+
+            } else if(!strcmp(c1s(root->child)->name,"LB")){
                 Operand t1 = irOpTemp();
                 Operand t2 = irOpTemp();
                 Type arr = irExp(root->child->child,t1);
@@ -371,7 +372,7 @@ Type irExp(ast* root,Operand place){
                     }
                 }
                 return arr->u.array.elem;
-            } else if(!strcmp(c1s(root),"DOT")){
+            } else if(!strcmp(c1s(root->child)->name,"DOT")){
                 Operand t1 = irOpTemp();
                 Type str = irExp(root->child->child,t1);
                 char* name = c1s2(root->child)->context;
@@ -488,11 +489,11 @@ Type irExp(ast* root,Operand place){
             if(c1s3(root)==NULL){
                 // no args
                 if(!strcmp(root->child->context,"read")){
-                    irCodeOp1(CODE_READ,place);
+                    irCodeOp1(CODE_READ,place); 
                 } else{
                     irCodeOp2(CODE_CALL,place,irOpFunc(root->child->context));
+                    return sym->t.func->returnType;
                 }
-                return sym->t.func->returnType;
             }else{
                 ArgList arg_list = irTransArgs(c1s2(root),NULL);
                 if(!strcmp(root->child->context,"write")){
@@ -508,9 +509,10 @@ Type irExp(ast* root,Operand place){
                         irCodeOp2(CODE_CALL,place,irOpFunc(sym->name));
                     } else{
                         irCodeOp2(CODE_CALL,irOpTemp(),irOpFunc(sym->name));
+                        
                     }
+                    return sym->t.func->returnType;
                 }
-                return sym->t.func->returnType;
             }
         }else{
             irCodeOp2(CODE_ASSIGN,place,irOpVar(sym->name));
@@ -551,8 +553,10 @@ int irTypeSize(Type a){
 }
 
 void irCond(ast* root, Operand label_true, Operand label_false){
-    if(!strcmp(root->child->name,"EXP")){
+    //printf("%s\n",root->child->name);
+    if(!strcmp(root->child->name,"Exp")){
         if(!strcmp(c1s(root)->name,"RELOP")){
+            //printf("hi\n");
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
@@ -692,7 +696,9 @@ Operand irOpFunc(char* name){
     new_op->kind = OP_FUNC;
     new_op->u.name = malloc(strlen(name)+3);
     strcpy(new_op->u.name, name);
-    strcat(new_op->u.name, "_f");
+    if(strcmp(name,"main")){
+        strcat(new_op->u.name, "_f");
+    }
     return new_op;
 }
 
@@ -716,6 +722,7 @@ Operand irOpTemp(){
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_VARIABLE;
     char* temp = malloc(sizeof(char)*16);
+    //printf("%d\n",temp_gen);
     sprintf(temp,"t_%d",temp_gen);
     temp_gen ++;
     new_op->u.name = temp;
@@ -741,6 +748,7 @@ Operand irOpOp(char* op){
 Operand irOpRelop(char* relop){
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_RELOP;
+    new_op->u.name = malloc(strlen(relop)+1);
     strcpy(new_op->u.name,relop);
     return new_op;
 }
@@ -764,6 +772,8 @@ void irCodeOp1(int kind,Operand op1){
     ir_tail = newcode;
     newcode->code.kind = kind;
     newcode->code.u.single_op.result = op1;
+    //printIRCodes(ir_out);
+    //printf("create code1\n");
 }
 
 // ASSIGN,REF,DEREF,DEREF_ASSIGN,CALL,DEC
@@ -776,6 +786,8 @@ void irCodeOp2(int kind,Operand op1,Operand op2){
     newcode->code.kind = kind;
     newcode->code.u.assign.left = op1;
     newcode->code.u.assign.right = op2;
+    //printIRCodes(ir_out);
+    //printf("create code2\n");
 }
 
 
@@ -790,6 +802,8 @@ void irCodeOp3(int kind,Operand result,Operand op1,Operand op2){
     newcode->code.u.binop.result = result;
     newcode->code.u.binop.op1 = op1;
     newcode->code.u.binop.op2 = op2;
+    //printIRCodes(ir_out);
+    //printf("create code3\n");
 }
 
 // IF
@@ -804,5 +818,7 @@ void irCodeOp4(int kind,Operand left,Operand relop,Operand right,Operand label){
     newcode->code.u.if_op.relop = relop;
     newcode->code.u.if_op.right = right;
     newcode->code.u.if_op.label = label;
+    //printIRCodes(ir_out);
+    //printf("create code4\n");
 }
 

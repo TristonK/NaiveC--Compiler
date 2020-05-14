@@ -262,10 +262,7 @@ void irCodeOp2(int kind,Operand op1,Operand op2);
 void irCodeOp3(int kind,Operand result,Operand op1,Operand op2);
 void irCodeOp4(int kind,Operand left,Operand relop,Operand right,Operand label);
 
-
-
-
-
+FILE *ir_out;
 InterCodes ir_root;
 InterCodes ir_tail;
 
