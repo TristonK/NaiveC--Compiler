@@ -225,10 +225,50 @@ struct ArgList_{
 };
 
 void IrAnalysis(ast* root);
+void irExtDefList(ast* root);
+void irExtDef(ast* extDef);
+Type irSpecifier(ast* root);
+Type irStructure(ast* root);
+FieldList irStructList(ast* root,FieldList field);
+FieldList irDefInStruct(ast* root,FieldList field);
+FieldList irDecListInStruct(ast* root, FieldList field);
+void irVarDec(ast* root, Type type);
+Symbol irGetArray(ast* root, Type type,int inStrcut);
+int getArraySize(Symbol sym);
+Symbol irFunDec(ast* root,Type type);
+Agru irGetArg(ast* root, Agru arg);
+Type irParamDec(ast* root);
+void irCompst(ast* root,Symbol func);
+void irDefList(ast* root);
+void irDef(ast* root);
+void irDec(ast* root, Type type);
+Type irExp(ast* root,Operand place);
+int irTypeSize(Type a);
+void irCond(ast* root, Operand label_true, Operand label_false);
+ArgList irTransArgs(ast* root,ArgList arg_list);
+void irStmtList(ast* root, Symbol func);
+void irStmt(ast* root,Symbol func);
+Symbol irCreateSymbol(Type type, char* name);
+Symbol irCreateFuncSymbol(Func func, char* name);
+Operand irOpFunc(char* name);
+Operand irOpVar(char* name);
+Operand irOpConstant(int num);
+Operand irOpTemp();
+Operand irOpOp(char* op);
+Operand irOpRelop(char* relop);
+Operand irOpLabel();
+void irCodeOp1(int kind,Operand op1);
+void irCodeOp2(int kind,Operand op1,Operand op2);
+void irCodeOp3(int kind,Operand result,Operand op1,Operand op2);
+void irCodeOp4(int kind,Operand left,Operand relop,Operand right,Operand label);
+
+
+
+
 
 InterCodes ir_root;
 InterCodes ir_tail;
 
 //ir_file.c
 
-void printIRCode(FILE* out);
+void printIRCodes(FILE* out);

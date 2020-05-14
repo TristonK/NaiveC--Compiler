@@ -342,11 +342,68 @@ Type irExp(ast* root,Operand place){
                 Operand t1 = irOpTemp();
                 irExp(c1s2(root),t1);
                 irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
-                irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+                }
             } else if(!strcmp(c1s(root),"LB")){
-
+                Operand t1 = irOpTemp();
+                Operand t2 = irOpTemp();
+                Type arr = irExp(root->child->child,t1);
+                irExp(c1s2(root->child),t2);
+                Operand ad1 = irOpTemp();
+                Operand ad2 = irOpTemp();
+                int array_size = irTypeSize(arr);
+                irCodeOp3(CODE_MUL,ad2,t2,irOpConstant(array_size));
+                irCodeOp3(CODE_ADD,ad1,ad2,t1);
+                Operand t3 = irOpTemp();
+                Type to_assign = irExp(c1s2(root),t3);
+                if(to_assign->kind==BASIC){
+                    irCodeOp2(CODE_DEREF_ASSIGN,ad1,t3);
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,t3);
+                    }
+                }else{
+                    Operand t4 = irOpTemp();
+                    irCodeOp2(CODE_DEREF,t4,t3);
+                    irCodeOp2(CODE_DEREF_ASSIGN,ad1,t4);
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,ad1);
+                    }
+                }
+                return arr->u.array.elem;
             } else if(!strcmp(c1s(root),"DOT")){
-
+                Operand t1 = irOpTemp();
+                Type str = irExp(root->child->child,t1);
+                char* name = c1s2(root->child)->context;
+                FieldList findName = str->u.structure;
+                Type ret = NULL;
+                int offset = 0;
+                while(findName!=NULL){
+                    if(!strcmp(findName->name,name)){
+                        ret = findName->type;
+                        break;
+                    }
+                    offset += irTypeSize(findName->type);
+                    findName = findName->tail;
+                }
+                Operand ad =  irOpTemp();
+                irCodeOp3(CODE_ADD,ad,t1,irOpConstant(offset));
+                Operand t2 = irOpTemp();
+                Type to_assign = irExp(c1s2(root),t2);
+                if(to_assign->kind==BASIC){
+                    irCodeOp2(CODE_DEREF_ASSIGN,ad,t2);
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,t2);
+                    }
+                }else{
+                    Operand t3 = irOpTemp();
+                    irCodeOp2(CODE_DEREF,t3,t2);
+                    irCodeOp2(CODE_DEREF_ASSIGN,ad,t3);
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,ad);
+                    }
+                }
+                return to_assign;
             }
         } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")||!strcmp(c1s(root)->name,"RELOP")|| !strcmp(root->child->name,"NOT")){
             Operand t1 = irOpTemp();
@@ -383,42 +440,41 @@ Type irExp(ast* root,Operand place){
         } else if(!strcmp(c1s(root)->name,"LB")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
-            irExp(root->child,t1);
+            Type arr = irExp(root->child,t1);
             irExp(c1s2(root),t2);
-            /*
-            Type arr = checkExp(root->child);
-            Type index = checkExp(c1s2(root));
-            if(arr == NULL || index==NULL){
-                return NULL;
+            Operand ad1 = irOpTemp();
+            Operand ad2 = irOpTemp();
+            int array_size = irTypeSize(arr);
+            irCodeOp3(CODE_MUL,ad2,t2,irOpConstant(array_size));
+            irCodeOp3(CODE_ADD,ad1,ad2,t1);
+            if(!strcmp(root->child->child->name,"ID")){
+                irCodeOp2(CODE_DEREF,place,ad1);
+            }else{
+                irCodeOp2(CODE_ASSIGN,place,ad1);
             }
-            if(arr->kind != ARRAY){
-                printSemaError(10,root->child->lineno,"");   
-                return NULL;
-            }
-            if(index==NULL){return NULL;}
-            if(index->kind ==BASIC && index->u.basic == 1){
-                return arr->u.array.elem;
-            } else{
-                printSemaError(12,c1s2(root)->lineno,"");
-                return NULL;
-            }*/
+            return arr->u.array.elem;
         } else if(!strcmp(c1s(root)->name,"DOT")){
-            /*Type str = checkExp(root->child);
-            if(str==NULL)return NULL;
-            if(str->kind!=STRUCTURE){
-                printSemaError(13,c1s(root)->lineno,"");
-                return NULL;
-            }
+            Operand t1 = irOpTemp();
+            Type str = irExp(root->child,t1);
             char* name = c1s2(root)->context;
             FieldList findName = str->u.structure;
+            Type ret = NULL;
+            int offset = 0;
             while(findName!=NULL){
                 if(!strcmp(findName->name,name)){
-                    return findName->type;
+                    ret = findName->type;
+                    break;
                 }
+                offset += irTypeSize(findName->type);
                 findName = findName->tail;
             }
-            printSemaError(14,c1s2(root)->lineno,name);
-            return NULL;*/
+            Operand ad =  irOpTemp();
+            irCodeOp3(CODE_ADD,ad,t1,irOpConstant(offset));
+            if(findName->type->kind==BASIC){
+                irCodeOp2(CODE_DEREF,place,ad);
+            }else{
+                irCodeOp2(CODE_ASSIGN,place,ad);    
+            }
         }
     } else if(!strcmp(root->child->name,"LP")){
         return irExp(c1s(root),place);
@@ -477,6 +533,23 @@ Type irExp(ast* root,Operand place){
 }
 
 
+int irTypeSize(Type a){
+    if(a->kind==BASIC){
+        return 4;
+    } else if(a->kind==ARRAY){
+        return a->u.array.size * irTypeSize(a->u.array.elem);
+    } else if(a->kind==STRUCTURE){
+        int ret = 0;
+        FieldList findName = a->u.structure;
+        while(findName!=NULL){
+            ret += irTypeSize(findName->type);
+            findName = findName->tail;
+        }
+        return ret;
+    }
+    return 0;
+}
+
 void irCond(ast* root, Operand label_true, Operand label_false){
     if(!strcmp(root->child->name,"EXP")){
         if(!strcmp(c1s(root)->name,"RELOP")){
@@ -510,19 +583,6 @@ void irCond(ast* root, Operand label_true, Operand label_false){
     irCodeOp1(CODE_GOTO,label_false);
 }
 
-
-/**
- * root: Exp in (EXP) ASSIGNOP EXP
-*/
-int isVarible(ast* root){
-    if(!strcmp(root->child->name,"ID") && c1s(root)==NULL){return 1;}
-    if(!strcmp(root->child->name,"Exp")){
-        if(!strcmp(c1s(root)->name,"LB") || !strcmp(c1s(root)->name,"DOT")){
-            return 1;
-        }
-    }
-    return 0;
-}
 
 /**
  * root: Args
@@ -589,7 +649,7 @@ void irStmt(ast* root,Symbol func){
             irCond(c1s2(root),label1,label2);
             irCodeOp1(CODE_LABEL,label1);
             irStmt(c1s4(root),func);
-            irCodeOp2(CODE_LABEL,label2);
+            irCodeOp1(CODE_LABEL,label2);
         }
     } else if(!strcmp(root->child->name,"WHILE")){
         Operand label1 = irOpLabel();
@@ -655,23 +715,8 @@ Operand irOpConstant(int num){
 Operand irOpTemp(){
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_VARIABLE;
-    char tmp[16];
-    char tp[16];
-    char t[2] = "t"; 
-    char zm[11]="0123456789";
-    int tmp_num = temp_gen;
-    int i=-1;
-    while(tmp_num!=0){
-        i++;
-        tmp[i] = zm[tmp_num%10];
-        tmp_num /= 10;
-    }
-    for(int j=0;i>=0;i--,j++){
-        tp[j]=tmp[i-1];
-    }
-    char* temp = malloc(strlen(tp)+2);
-    strcpy(temp,t);
-    strcat(temp,tp);
+    char* temp = malloc(sizeof(char)*16);
+    sprintf(temp,"t_%d",temp_gen);
     temp_gen ++;
     new_op->u.name = temp;
     return new_op;
@@ -703,24 +748,9 @@ Operand irOpRelop(char* relop){
 Operand irOpLabel(){
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_LABEL;
-    char tmp[16];
-    char tp[16];
-    char t[2] = "l"; 
-    char zm[11]="0123456789";
-    int tmp_num = label_gen;
-    int i=-1;
-    while(tmp_num!=0){
-        i++;
-        tmp[i] = zm[tmp_num%10];
-        tmp_num /= 10;
-    }
-    for(int j=0;i>=0;i--,j++){
-        tp[j]=tmp[i-1];
-    }
-    char* temp = malloc(strlen(tp)+2);
-    strcpy(temp,t);
-    strcat(temp,tp);
+    char* temp = malloc(sizeof(char)*16);
     label_gen ++;
+    sprintf(temp,"l_%d",label_gen);
     new_op->u.name = temp;
     return new_op;
 }

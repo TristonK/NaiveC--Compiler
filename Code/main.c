@@ -29,7 +29,7 @@ int main(int argc, char** argv){
             //printf("end\n");
             //semaAnalysis(root);
             IrAnalysis(root);
-            printIRCode(ir_out);
+            printIRCodes(ir_out);
         }
     }
     return 0;
