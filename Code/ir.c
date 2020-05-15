@@ -1,5 +1,7 @@
 #include "common.h"
 
+#define OPTIMIZE
+
 void IrAnalysis(ast* root){
     createHash();
     createEnv();
@@ -8,8 +10,8 @@ void IrAnalysis(ast* root){
     ir_root = malloc(sizeof(InterCodes));
     ir_tail = ir_root;
     irExtDefList(root->child); //extDefList
+    optimize();
 }
-
 
 /*
 * root: extDefList
@@ -319,6 +321,13 @@ void irDec(ast* root, Type type){
     }
 }
 
+int isConstant(ast* root){
+    if(!strcmp(root->name,"INT")){
+        return 1;
+    }
+    return 0;
+}
+
 
 /**
  * root: Exp
@@ -361,11 +370,18 @@ Type irExp(ast* root,Operand place){
                     }
                     return hashFind(root->child->child)->t.type;
                 }
-                Operand t1 = irOpTemp();
-                Type a = irExp(c1s2(root),t1);
-                irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
-                if(place!=NULL){
-                    irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+                if(isConstant(c1s2(root)->child)){
+                    irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),irOpConstant(c1s2(root)->child->val.intVal));
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+                    }
+                }else{
+                    Operand t1 = irOpTemp();
+                    Type a = irExp(c1s2(root),t1);
+                    irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
+                    if(place!=NULL){
+                        irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
+                    }
                 }
             } else if(!strcmp(c1s(root->child)->name,"LB")){
                 Operand t1 = irOpTemp();
@@ -454,36 +470,58 @@ Type irExp(ast* root,Operand place){
                 irCodeOp1(CODE_LABEL,t2);
             
         } else if(!strcmp(c1s(root)->name,"PLUS")){
-            Operand t1 = irOpTemp();
-            Operand t2 = irOpTemp();
-            irExp(root->child,t1);
-            irExp(c1s2(root),t2);
-            if(place!=NULL){
-                irCodeOp3(CODE_ADD,place,t1,t2);
+            if(isConstant(root->child->child)&&isConstant(c1s2(root)->child)){
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->child->val.intVal + c1s2(root)->child->val.intVal));
+                }
+            }else{
+                Operand t1 = irOpTemp();
+                Operand t2 = irOpTemp();
+                irExp(root->child,t1);
+                irExp(c1s2(root),t2);
+                if(place!=NULL){
+                    irCodeOp3(CODE_ADD,place,t1,t2);
+                }
             }
         } else if( !strcmp(c1s(root)->name,"MINUS")){
+            if(isConstant(root->child->child)&&isConstant(c1s2(root)->child)){
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->child->val.intVal - c1s2(root)->child->val.intVal));
+                }
+            }else{
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
             if(place!=NULL){
                 irCodeOp3(CODE_SUB,place,t1,t2);
-            }
+            }}
         }else if( !strcmp(c1s(root)->name,"STAR")){
+            if(isConstant(root->child->child)&&isConstant(c1s2(root)->child)){
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->child->val.intVal * c1s2(root)->child->val.intVal));
+                }
+            }else{
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
             if(place!=NULL){
                 irCodeOp3(CODE_MUL,place,t1,t2);
-            }
+            }}
         } else if( !strcmp(c1s(root)->name,"DIV")){
-            Operand t1 = irOpTemp();
-            Operand t2 = irOpTemp();
-            irExp(root->child,t1);
-            irExp(c1s2(root),t2);
-            if(place!=NULL){
-                irCodeOp3(CODE_DIV,place,t1,t2);
+            if(isConstant(root->child->child)&&isConstant(c1s2(root)->child)&&c1s2(root)->child->val.intVal!=0){
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->child->val.intVal / c1s2(root)->child->val.intVal));
+                }
+            }else{
+                Operand t1 = irOpTemp();
+                Operand t2 = irOpTemp();
+                irExp(root->child,t1);
+                irExp(c1s2(root),t2);
+                if(place!=NULL){
+                    irCodeOp3(CODE_DIV,place,t1,t2);
+                }
             }
         } else if(!strcmp(c1s(root)->name,"LB")){
             Operand t1 = irOpTemp();
@@ -504,7 +542,6 @@ Type irExp(ast* root,Operand place){
             }
             return arr->u.array.elem;
         } else if(!strcmp(c1s(root)->name,"DOT")){
-            
             Operand t1 = irOpTemp();
             Type str = irExp(root->child,t1);
             char* name = c1s2(root)->context;
@@ -804,7 +841,7 @@ Operand irOpTemp(){
     new_op->kind = OP_VARIABLE;
     char* temp = malloc(sizeof(char)*16);
     //printf("%d\n",temp_gen);
-    sprintf(temp,"t_%d",temp_gen);
+    sprintf(temp,"ts_%d",temp_gen);
     temp_gen ++;
     new_op->u.name = temp;
     return new_op;

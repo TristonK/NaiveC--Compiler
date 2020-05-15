@@ -274,3 +274,5 @@ InterCodes ir_tail;
 //ir_file.c
 
 void printIRCodes(FILE* out);
+
+void optimize();
