@@ -355,7 +355,7 @@ Type irExp(ast* root,Operand place){
                     Operand t3 = irOpTemp();
                     for(int i=0;i<a_size&&i<b_size;i+=4){
                         irCodeOp2(CODE_DEREF,t3,t2);
-                        irCodeOp2(CODE_DEREF_ASSIGN,t1,t2);
+                        irCodeOp2(CODE_DEREF_ASSIGN,t1,t3);
                         irCodeOp3(CODE_ADD,t1,t1,irOpConstant(4));
                         irCodeOp3(CODE_ADD,t2,t2,irOpConstant(4));
                     }
@@ -391,7 +391,7 @@ Type irExp(ast* root,Operand place){
                         Operand tc = irOpTemp();
                         for(int i=0;i<a_size&&i<b_size;i+=4){
                             irCodeOp2(CODE_DEREF,tc,t3);
-                            irCodeOp2(CODE_DEREF_ASSIGN,ad1,t3);
+                            irCodeOp2(CODE_DEREF_ASSIGN,ad1,tc);
                             irCodeOp3(CODE_ADD,ad1,ad1,irOpConstant(4));
                             irCodeOp3(CODE_ADD,t3,t3,irOpConstant(4));
                         }
@@ -440,15 +440,19 @@ Type irExp(ast* root,Operand place){
                 return to_assign;
             }
         } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")||!strcmp(c1s(root)->name,"RELOP")){
-            if(place!=NULL){
+            
                 Operand t1 = irOpTemp();
                 Operand t2 = irOpTemp();
-                irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+                }
                 irCond(root,t1,t2);
                 irCodeOp1(CODE_LABEL,t1);
-                irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
+                if(place!=NULL){
+                    irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
+                }
                 irCodeOp1(CODE_LABEL,t2);
-            }
+            
         } else if(!strcmp(c1s(root)->name,"PLUS")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
