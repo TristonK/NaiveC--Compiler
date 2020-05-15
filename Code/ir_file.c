@@ -3,12 +3,16 @@
 
 char* printOperand(Operand op){
     if(op==NULL){return NULL;}
-    if(op->kind!=OP_CONSTANT){
-        return op->u.name;
+    if(op->kind==OP_CONSTANT){
+        char* ret = malloc(sizeof(char)*16);
+        sprintf(ret,"#%d",op->u.value);
+        return ret;
+    }else if(op->kind==OP_ADDRESS){
+        char* ret = malloc(strlen(op->u.name)+2);
+        sprintf(ret,"&%s",op->u.name);
+        return ret;
     }
-    char* ret = malloc(sizeof(char)*16);
-    sprintf(ret,"#%d",op->u.value);
-    return ret;
+    return op->u.name;
 }
 
 char* printIRCode(InterCode *code){

@@ -184,12 +184,13 @@ Symbol irGetArray(ast* root, Type type,int inStrcut){
 }
 
 int getArraySize(Symbol sym){
-    int ret=4;
+    int ret=1;
     Type tp = sym->t.type;
     while(tp!=NULL && tp->kind==ARRAY){
         ret *= tp->u.array.size;
         tp = tp->u.array.elem;
     }
+    ret *= irTypeSize(tp);
     return ret;
 }
 
@@ -295,8 +296,13 @@ void irDec(ast* root, Type type){
     if(c1s(root->child->child)!=NULL){//array
         sym = irGetArray(root->child->child,type,0);
         irCodeOp2(CODE_DEC,irOpVar(sym->name),irOpConstant(getArraySize(sym)));
+        sym->op = irOpAddr(sym->name);
     }else{
         sym = irCreateSymbol(type,root->child->child->child->context);
+        if(type->kind==STRUCTURE){
+            irCodeOp2(CODE_DEC,irOpVar(sym->name),irOpConstant(irTypeSize(type)));
+            sym->op = irOpAddr(sym->name);
+        }
         hashInsert(sym);
     }
     if(c1s(root->child)!=NULL){    
@@ -339,21 +345,36 @@ Type irExp(ast* root,Operand place){
     if(!strcmp(root->child->name,"Exp")){
         if(!strcmp(c1s(root)->name,"ASSIGNOP")){
             if(!strcmp(root->child->child->name,"ID") && c1s(root->child)==NULL){
+                if(hashFind(root->child->child)->t.type->kind==ARRAY){
+                    Operand t1 = irOpTemp();
+                    Operand t2 = irOpTemp();
+                    Type a = irExp(root->child,t1);
+                    Type b = irExp(c1s2(root),t2);
+                    int a_size = irTypeSize(a);
+                    int b_size = irTypeSize(b);
+                    Operand t3 = irOpTemp();
+                    for(int i=0;i<a_size&&i<b_size;i+=4){
+                        irCodeOp2(CODE_DEREF,t3,t2);
+                        irCodeOp2(CODE_DEREF_ASSIGN,t1,t2);
+                        irCodeOp3(CODE_ADD,t1,t1,irOpConstant(4));
+                        irCodeOp3(CODE_ADD,t2,t2,irOpConstant(4));
+                    }
+                    return hashFind(root->child->child)->t.type;
+                }
                 Operand t1 = irOpTemp();
-                irExp(c1s2(root),t1);
+                Type a = irExp(c1s2(root),t1);
                 irCodeOp2(CODE_ASSIGN ,irOpVar(root->child->child->context),t1);
                 if(place!=NULL){
                     irCodeOp2(CODE_ASSIGN,place,irOpVar(root->child->child->context));
                 }
-
             } else if(!strcmp(c1s(root->child)->name,"LB")){
                 Operand t1 = irOpTemp();
                 Operand t2 = irOpTemp();
                 Type arr = irExp(root->child->child,t1);
-                irExp(c1s2(root->child),t2);
+                Type b = irExp(c1s2(root->child),t2);
                 Operand ad1 = irOpTemp();
                 Operand ad2 = irOpTemp();
-                int array_size = irTypeSize(arr);
+                int array_size = irTypeSize(arr->u.array.elem);
                 irCodeOp3(CODE_MUL,ad2,t2,irOpConstant(array_size));
                 irCodeOp3(CODE_ADD,ad1,ad2,t1);
                 Operand t3 = irOpTemp();
@@ -364,11 +385,23 @@ Type irExp(ast* root,Operand place){
                         irCodeOp2(CODE_ASSIGN,place,t3);
                     }
                 }else{
-                    Operand t4 = irOpTemp();
-                    irCodeOp2(CODE_DEREF,t4,t3);
-                    irCodeOp2(CODE_DEREF_ASSIGN,ad1,t4);
-                    if(place!=NULL){
-                        irCodeOp2(CODE_ASSIGN,place,ad1);
+                    if(to_assign->kind==ARRAY){
+                        int a_size = irTypeSize(arr);
+                        int b_size = irTypeSize(to_assign);
+                        Operand tc = irOpTemp();
+                        for(int i=0;i<a_size&&i<b_size;i+=4){
+                            irCodeOp2(CODE_DEREF,tc,t3);
+                            irCodeOp2(CODE_DEREF_ASSIGN,ad1,t3);
+                            irCodeOp3(CODE_ADD,ad1,ad1,irOpConstant(4));
+                            irCodeOp3(CODE_ADD,t3,t3,irOpConstant(4));
+                        }
+                    }else{
+                        Operand t4 = irOpTemp();
+                        irCodeOp2(CODE_DEREF,t4,t3);
+                        irCodeOp2(CODE_DEREF_ASSIGN,ad1,t4);
+                        if(place!=NULL){
+                            irCodeOp2(CODE_ASSIGN,place,ad1);
+                        }
                     }
                 }
                 return arr->u.array.elem;
@@ -406,55 +439,68 @@ Type irExp(ast* root,Operand place){
                 }
                 return to_assign;
             }
-        } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")||!strcmp(c1s(root)->name,"RELOP")|| !strcmp(root->child->name,"NOT")){
-            Operand t1 = irOpTemp();
-            Operand t2 = irOpTemp();
-            irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
-            irCond(root,t1,t2);
-            irCodeOp1(CODE_LABEL,t1);
-            irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
-            irCodeOp1(CODE_LABEL,t2);
+        } else if(!strcmp(c1s(root)->name,"AND") || !strcmp(c1s(root)->name,"OR")||!strcmp(c1s(root)->name,"RELOP")){
+            if(place!=NULL){
+                Operand t1 = irOpTemp();
+                Operand t2 = irOpTemp();
+                irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+                irCond(root,t1,t2);
+                irCodeOp1(CODE_LABEL,t1);
+                irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
+                irCodeOp1(CODE_LABEL,t2);
+            }
         } else if(!strcmp(c1s(root)->name,"PLUS")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
-            irCodeOp3(CODE_ADD,place,t1,t2);
+            if(place!=NULL){
+                irCodeOp3(CODE_ADD,place,t1,t2);
+            }
         } else if( !strcmp(c1s(root)->name,"MINUS")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
-            irCodeOp3(CODE_SUB,place,t1,t2);
+            if(place!=NULL){
+                irCodeOp3(CODE_SUB,place,t1,t2);
+            }
         }else if( !strcmp(c1s(root)->name,"STAR")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
-            irCodeOp3(CODE_MUL,place,t1,t2);
+            if(place!=NULL){
+                irCodeOp3(CODE_MUL,place,t1,t2);
+            }
         } else if( !strcmp(c1s(root)->name,"DIV")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             irExp(root->child,t1);
             irExp(c1s2(root),t2);
-            irCodeOp3(CODE_DIV,place,t1,t2);
+            if(place!=NULL){
+                irCodeOp3(CODE_DIV,place,t1,t2);
+            }
         } else if(!strcmp(c1s(root)->name,"LB")){
             Operand t1 = irOpTemp();
             Operand t2 = irOpTemp();
             Type arr = irExp(root->child,t1);
-            irExp(c1s2(root),t2);
-            Operand ad1 = irOpTemp();
-            Operand ad2 = irOpTemp();
-            int array_size = irTypeSize(arr);
-            irCodeOp3(CODE_MUL,ad2,t2,irOpConstant(array_size));
-            irCodeOp3(CODE_ADD,ad1,ad2,t1);
-            if(!strcmp(root->child->child->name,"ID")){
-                irCodeOp2(CODE_DEREF,place,ad1);
-            }else{
-                irCodeOp2(CODE_ASSIGN,place,ad1);
+            Type arr2 = irExp(c1s2(root),t2);
+            if(place!=NULL){
+                Operand ad1 = irOpTemp();
+                Operand ad2 = irOpTemp();
+                int array_size = irTypeSize(arr->u.array.elem);
+                irCodeOp3(CODE_MUL,ad2,t2,irOpConstant(array_size));
+                irCodeOp3(CODE_ADD,ad1,ad2,t1);
+                if(arr->u.array.elem->kind!=BASIC || (root->sib!=NULL && !strcmp(root->sib->name,"DOT"))){
+                    irCodeOp2(CODE_ASSIGN,place,ad1);
+                }else{
+                    irCodeOp2(CODE_DEREF,place,ad1);
+                }   
             }
             return arr->u.array.elem;
         } else if(!strcmp(c1s(root)->name,"DOT")){
+            
             Operand t1 = irOpTemp();
             Type str = irExp(root->child,t1);
             char* name = c1s2(root)->context;
@@ -469,23 +515,41 @@ Type irExp(ast* root,Operand place){
                 offset += irTypeSize(findName->type);
                 findName = findName->tail;
             }
-            Operand ad =  irOpTemp();
-            irCodeOp3(CODE_ADD,ad,t1,irOpConstant(offset));
-            if(findName->type->kind==BASIC){
-                irCodeOp2(CODE_DEREF,place,ad);
-            }else{
-                irCodeOp2(CODE_ASSIGN,place,ad);    
+            if(place!=NULL){
+                Operand ad =  irOpTemp();
+                irCodeOp3(CODE_ADD,ad,t1,irOpConstant(offset));
+                if(findName->type->kind==BASIC){
+                    irCodeOp2(CODE_DEREF,place,ad);
+                }else{
+                    irCodeOp2(CODE_ASSIGN,place,ad);    
+                }
             }
+            return ret;
         }
     } else if(!strcmp(root->child->name,"LP")){
         return irExp(c1s(root),place);
     } else if(!strcmp(root->child->name,"MINUS")){
-        Operand t1 = irOpTemp();
-        irExp(c1s(root),t1);
-        irCodeOp3(CODE_SUB,place,irOpConstant(0),t1);
+            Operand t1 = irOpTemp();
+            irExp(c1s(root),t1);
+            if(place!=NULL){
+                irCodeOp3(CODE_SUB,place,irOpConstant(0),t1);
+            }
+    }else if(!strcmp(root->child->name,"NOT")){
+            Operand t1 = irOpTemp();
+            Operand t2 = irOpTemp();
+            if(place!=NULL)
+                irCodeOp2(CODE_ASSIGN,place,irOpConstant(0));
+            irCond(root,t1,t2);
+            irCodeOp1(CODE_LABEL,t1);
+            if(place!=NULL)
+                irCodeOp2(CODE_ASSIGN,place,irOpConstant(1));
+            irCodeOp1(CODE_LABEL,t2);
     } else if(!strcmp(root->child->name,"ID")){
         Symbol sym = hashFind(root->child);
         if(c1s(root)!=NULL){//function
+            if(place==NULL){
+                place = irOpTemp();
+            }
             if(c1s3(root)==NULL){
                 // no args
                 if(!strcmp(root->child->context,"read")){
@@ -515,17 +579,20 @@ Type irExp(ast* root,Operand place){
                 }
             }
         }else{
-            irCodeOp2(CODE_ASSIGN,place,irOpVar(sym->name));
+            if(place!=NULL)
+                irCodeOp2(CODE_ASSIGN,place,irOpVar(sym->name));
             return sym->t.type;
         }
     } else if(!strcmp(root->child->name,"INT")){
-        irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->val.intVal));
+        if(place!=NULL)
+            irCodeOp2(CODE_ASSIGN,place,irOpConstant(root->child->val.intVal));
     } else if(!strcmp(root->child->name,"FLOAT")){
         Type ret = malloc(sizeof(struct Type_));
         ret->kind = BASIC;
         ret->u.basic = 2;
         return ret;
     } else {
+        printf("%s\n",root->child->name);
         assert(0);
     }
     Type ret = malloc(sizeof(struct Type_));
@@ -536,6 +603,7 @@ Type irExp(ast* root,Operand place){
 
 
 int irTypeSize(Type a){
+    if(a==NULL){printf("shit\n");return 1;}
     if(a->kind==BASIC){
         return 4;
     } else if(a->kind==ARRAY){
@@ -572,7 +640,7 @@ void irCond(ast* root, Operand label_true, Operand label_false){
             return;
         } else if(!strcmp(c1s(root)->name,"OR")){
             Operand label1 = irOpLabel();
-            irCond(root->child,label1,label_true);
+            irCond(root->child,label_true,label1);
             irCodeOp1(CODE_LABEL,label1);
             irCond(c1s2(root),label_true,label_false);
             return;
@@ -595,7 +663,7 @@ void irCond(ast* root, Operand label_true, Operand label_false){
 */
 ArgList irTransArgs(ast* root,ArgList arg_list){
     Operand t1 = irOpTemp();
-    irExp(root->child,t1);
+    Type arg = irExp(root->child,t1);
     ArgList n_t1 = malloc(sizeof(struct ArgList_));
     n_t1->arg = t1;
     n_t1->next = arg_list;
@@ -678,6 +746,7 @@ Symbol irCreateSymbol(Type type, char* name){
     ret->isfunc = 0;
     ret->depth = getEnvdepth();
     ret->isdef = 0;
+    ret->op = NULL;
     return ret;
 }
 
@@ -687,6 +756,7 @@ Symbol irCreateFuncSymbol(Func func, char* name){
     ret->t.func = func;
     ret->isfunc = 1;
     ret->isdef = 0;
+    ret->op = NULL;
     return ret;
 }
 
@@ -703,11 +773,18 @@ Operand irOpFunc(char* name){
 }
 
 Operand irOpVar(char* name){
+    Symbol sym = hashFindName(name);
+    if(sym!=NULL && sym->op!=NULL){
+        return sym->op;
+    }
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_VARIABLE;
     new_op->u.name = malloc(strlen(name)+3);
     strcpy(new_op->u.name, name);
     strcat(new_op->u.name, "_v");
+    /*if(sym!=NULL){
+        sym->op = new_op;
+    }*/
     return new_op;
 }
 
@@ -750,6 +827,15 @@ Operand irOpRelop(char* relop){
     new_op->kind = OP_RELOP;
     new_op->u.name = malloc(strlen(relop)+1);
     strcpy(new_op->u.name,relop);
+    return new_op;
+}
+
+Operand irOpAddr(char* name){
+    Operand new_op = malloc(sizeof(struct Operand_));
+    new_op->kind = OP_ADDRESS;
+    new_op->u.name = malloc(strlen(name)+3);
+    strcpy(new_op->u.name, name);
+    strcat(new_op->u.name, "_v");
     return new_op;
 }
 

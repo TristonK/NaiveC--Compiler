@@ -82,6 +82,8 @@ struct Func_
     Agru agru;
 };
 
+typedef struct Operand_* Operand;
+
 struct Symbol_
 {
     char* name;
@@ -95,6 +97,7 @@ struct Symbol_
     int depth;
     int isfunc;
     int isdef;
+    Operand op;
 };
 
 struct Stack_
@@ -123,6 +126,7 @@ Symbol FindStruct(ast* root);
 Symbol findFunc(char* name);
 void printAllSym();
 int missDepthDup(char* name, int depth);
+Symbol hashFindName(char* name);
 
 //envStack.c
 
@@ -257,6 +261,7 @@ Operand irOpTemp();
 Operand irOpOp(char* op);
 Operand irOpRelop(char* relop);
 Operand irOpLabel();
+Operand irOpAddr(char* name);
 void irCodeOp1(int kind,Operand op1);
 void irCodeOp2(int kind,Operand op1,Operand op2);
 void irCodeOp3(int kind,Operand result,Operand op1,Operand op2);

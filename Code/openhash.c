@@ -119,6 +119,18 @@ Symbol hashFind(ast* root){
     return ret;
 }
 
+Symbol hashFindName(char* name){
+    unsigned int nameHash = getHash(name);
+    Symbol ret = hashTable[nameHash];
+    while(ret!=NULL && strcmp(ret->name,name)){
+        ret = ret->hashNext;
+    }
+    if(ret==NULL){
+        ret = NULL;
+    }
+    return ret;
+}
+
 Symbol FindStruct(ast* root){
     unsigned int nameHash = getHash(root->context);
     Symbol ret = hashTable[nameHash];
