@@ -6,13 +6,13 @@ void changeCodeCons(InterCodes starting, char* victim,int num);
 int changeOpCons(Operand op,char* victim,int num, int flag);
 void changeIf();
 int findLableUse(char* str, InterCodes starting);
-
+int noUseCons(char* str, InterCodes starting);
 void optimize(){
-    //for(int i=0;i<3;i++){
-      //  deleteConstantCal();
+    for(int i=0;i<2;i++){
+        //deleteConstantCal();
         //deleteConstant();
         //changeIf();
-    //}
+    }
 }
 
 void deleteConstantCal(){
@@ -116,7 +116,7 @@ void deleteConstant(){
     {
         InterCode code = head->code;
         if(code.kind==CODE_ASSIGN){
-            if(code.u.assign.right->kind == OP_CONSTANT && strncmp(code.u.assign.left->u.name,"ts_",3)){
+            if(code.u.assign.right->kind == OP_CONSTANT && !noUseCons(code.u.assign.left->u.name,head->next)){
                 InterCodes prev = head->prev;
                 InterCodes next = head->next;
                 changeCodeCons(head->next,code.u.assign.left->u.name,code.u.assign.right->u.value);
@@ -127,6 +127,23 @@ void deleteConstant(){
         head = head->next;
     }
     
+}
+
+int noUseCons(char* str, InterCodes starting){
+    if(starting==NULL){return 1;}
+    starting = starting->next;
+    while(starting!=NULL){
+        if(starting->code.kind==CODE_ASSIGN||starting->code.kind==CODE_REF||starting->code.kind==CODE_DEREF||starting->code.kind==CODE_DEREF_ASSIGN||starting->code.kind==CODE_CALL||starting->code.kind==CODE_DEC){
+            if(!strcmp(starting->code.u.assign.left->u.name,str)){return 1;}
+        }else if(starting->code.kind==CODE_ADD||starting->code.kind==CODE_SUB||starting->code.kind==CODE_MUL||starting->code.kind==CODE_DIV){
+            if(!strcmp(starting->code.u.binop.result->u.name,str)){return 1;}
+        }else if(starting->code.kind==CODE_IF){
+            if(!strcmp(starting->code.u.if_op.left->u.name,str)){return 1;}
+            if(!strcmp(starting->code.u.if_op.right->u.name,str)){return 1;}
+        }
+        starting = starting->next;
+    }
+    return 0;
 }
 
 void changeCodeCons(InterCodes starting, char* victim,int num){
@@ -148,7 +165,7 @@ void changeCodeCons(InterCodes starting, char* victim,int num){
     case CODE_DEC:
         flags = changeOpCons(starting->code.u.assign.left,victim,num,1);
         changeOpCons(starting->code.u.assign.right,victim,num,0);
-        if (flags==-1){return;}
+        if (flags==-1){printf("shit1\n");return;}
         break;
     case CODE_ADD:
     case CODE_SUB:
@@ -157,7 +174,8 @@ void changeCodeCons(InterCodes starting, char* victim,int num){
         flags = changeOpCons(starting->code.u.binop.result,victim,num,1);
         changeOpCons(starting->code.u.binop.op1,victim,num,0);
         changeOpCons(starting->code.u.binop.op2,victim,num,0);
-        if (flags==-1){return;}
+        if (flags==-1){printf("shit2\n");return;}
+        break;
     case CODE_IF:
         changeOpCons(starting->code.u.if_op.left,victim,num,0);
         changeOpCons(starting->code.u.if_op.right,victim,num,0);
