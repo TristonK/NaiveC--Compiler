@@ -9,6 +9,7 @@ extern int emptyFile;
 extern int yylineno;
 
 extern FILE *ir_out;
+extern FILE *mips_out;
 
 int main(int argc, char** argv){
     if(argc>1){
@@ -18,7 +19,7 @@ int main(int argc, char** argv){
         }
         yyrestart(yyin);
     } else{return 1;}
-    if(!(ir_out = fopen(argv[2],"w"))){
+    if(!(mips_out = fopen(argv[2],"w"))){
         perror(argv[2]);
         return 1;
     }
@@ -27,13 +28,14 @@ int main(int argc, char** argv){
     yyparse();
     if(!lex_error && !syn_error){
         if(emptyFile){
-            printf("Program (%d)\n", yylineno);
+            //printf("Program (%d)\n", yylineno);
         }else{
             //printTree(root,0);
             //printf("end\n");
             //semaAnalysis(root);
             IrAnalysis(root);
-            printIRCodes(ir_out);
+            MipsGen();
+            printMipsCodes(mips_out);
         }
     }
     return 0;

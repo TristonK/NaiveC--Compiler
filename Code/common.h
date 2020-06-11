@@ -276,3 +276,46 @@ InterCodes ir_tail;
 void printIRCodes(FILE* out);
 
 void optimize();
+
+//mips_out.c
+
+FILE *mips_out;
+void printMipsCodes(FILE* out);
+
+//mips.h
+typedef struct Mips_Operand_* MipsOperand;
+typedef struct MipsCode_* MipsCode;
+
+struct Mips_Operand_
+{
+    enum {
+        MOP_LABEL,MOP_REG,MOP_IMM,MOP_FUNC,MOP_OFFSET
+    } kind;
+    union{
+        int value;
+        char* name;
+        struct {char* reg; int offset;} offset;
+    }u;
+};
+
+struct MipsCode_{
+    enum{
+        MIPS_LABEL,MIPS_LI,MIPS_MOVE,
+        MIPS_ADDI,MIPS_ADD,MIPS_SUB,MIPS_MUL,MIPS_DIV,MIPS_MFLO,
+        MIPS_SW,MIPS_LW,
+        MIPS_J,
+        MIPS_JAL,MIPS_JR,
+        MIPS_BEQ,MIPS_BNE,MIPS_BGT,MIPS_BLT,MIPS_BGE,MIPS_BLE,
+        MIPS_ANNO
+        } kind;
+    union{
+        struct{MipsOperand op1,op2;} assign;//from left to right
+        struct{MipsOperand op1,op2,op3;}binop;
+        struct{Operand op1;} single_op;
+        char* annotation;
+    }u;
+    MipsCode next;
+};
+
+
+//mips.c

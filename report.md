@@ -26,6 +26,8 @@
 
 `ir_file.c` 中间代码输出
 
+`optimize.c` 代码优化
+
 ## 如何编译
 
 使用助教提供的Makefile进行编译生成parser
@@ -42,14 +44,31 @@ GNU Bison 3.0.4
 
 ## 实现的重点细节
 
-1. 数组赋值的实现
+1. 实现过程
 
-## 代码优化
+   将语义分析的流程类似，将代码去除掉报错，并加上一些翻译过程即得到了最终代码。代码维护了一个双向链表来存储ir代码。在符号表上还是大部分维持着lab2的实验代码过程。
 
-1. 常数计算直接计算
+2. 数组赋值的实现
+
+   考虑到数组赋值的实现，分在两部分进行，一种是类似于 `a=b` 这种，会识别为ID的，另一种情况是高维数组`a[3]=b[3]`的这种情况，在两处实现，但是实现方式类似，均为考虑调用`irExp`后判断类型是否为数组，然后获取两个数组中较小的那个大小，然后按地址逐渐加4，逐渐赋值。前者的代码如下（后者情况类似）：
+
+   ```c
+   				  Operand t1 = irOpTemp();
+                       Operand t2 = irOpTemp();
+                       Type a = irExp(root->child,t1);
+                       Type b = irExp(c1s2(root),t2);
+                       int a_size = irTypeSize(a);
+                       int b_size = irTypeSize(b);
+                       Operand t3 = irOpTemp();
+                       for(int i=0;i<a_size&&i<b_size;i+=4){
+                           irCodeOp2(CODE_DEREF,t3,t2);
+                           irCodeOp2(CODE_DEREF_ASSIGN,t1,t3);
+                           irCodeOp3(CODE_ADD,t1,t1,irOpConstant(4));
+                           irCodeOp3(CODE_ADD,t2,t2,irOpConstant(4));
+                       }
+   ```
 
 ## 实验中遇到的困难/不足
 
-1. 原本想实现申请内存后的free，但是实在bug太多了（/(ㄒoㄒ)/~~），最后决定放弃free只申请不释放，在超强测试的大输入时或许可能会出现问题。
-
-2. 在结构体和函数的局部变量定义中函数理论上可以做到复用统一成一个接口，但是因为写的顺序的原因加上重构比较复杂就放弃了，导致代码略微冗长。
+1. 非常遗憾，没有做太多的优化，很多优化是可以做的，但是因为bug太多，加上自己喜欢拖ddl，导致自己没有很好的考虑优化。
+2. 数组和结构体的赋值与引用一开始没有思考清楚或者少考虑了一些情况，导致de了很久的bug，希望下次更加细心。
