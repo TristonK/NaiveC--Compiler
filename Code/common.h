@@ -197,6 +197,11 @@ struct Operand_
         int value;
         char* name;
     }u;
+    Operand in_func;
+    union{
+        int var_offset;
+        int func_stack_size;
+    }offset;   
 };
 
 struct InterCode{
@@ -294,7 +299,7 @@ struct Mips_Operand_
     union{
         int value;
         char* name;
-        struct {char* reg; int offset;} offset;
+        struct {int reg; int offset;} offset;
     }u;
 };
 
@@ -306,12 +311,13 @@ struct MipsCode_{
         MIPS_J,
         MIPS_JAL,MIPS_JR,
         MIPS_BEQ,MIPS_BNE,MIPS_BGT,MIPS_BLT,MIPS_BGE,MIPS_BLE,
-        MIPS_ANNO
+        MIPS_ANNO,
+        MIPS_FUNC,MIPS_LA
         } kind;
     union{
         struct{MipsOperand op1,op2;} assign;//from left to right
         struct{MipsOperand op1,op2,op3;}binop;
-        struct{Operand op1;} single_op;
+        struct{MipsOperand op1;} single_op;
         char* annotation;
     }u;
     MipsCode next;
@@ -319,3 +325,32 @@ struct MipsCode_{
 
 
 //mips.c
+
+MipsCode mips_head;
+MipsCode mips_tail;
+MipsOperand mips_read;
+MipsOperand mips_write;
+MipsOperand mips_sp;
+MipsOperand mips_ra;
+MipsOperand mips_v0;
+MipsOperand mips_a0;
+Operand cur_func;
+int regMap[32];
+//8-15,24-25 duanqi  16-23 changqi
+
+void createMipsLabel(MipsOperand op);
+void createMipsFunc(MipsOperand op);
+void createMipsLi(MipsOperand op1,MipsOperand op2);
+void createMipsMove(MipsOperand op1,MipsOperand op2);
+void createMipsAddi(MipsOperand result,MipsOperand op1,MipsOperand op2);
+void createMipsAdd(MipsOperand result,MipsOperand op1,MipsOperand op2);
+void createMipsSub(MipsOperand result,MipsOperand op1,MipsOperand op2);
+void createMipsMul(MipsOperand result,MipsOperand op1,MipsOperand op2);
+void createMipsDiv(MipsOperand result,MipsOperand op1,MipsOperand op2);
+void createMipsMflo(MipsOperand op1);
+void createMipsLw(MipsOperand op1,MipsOperand op2);
+void createMipsSw(MipsOperand op1,MipsOperand op2);
+void createMipsJ(MipsOperand op);
+void createMipsJal(MipsOperand op);
+void createMipsJr(MipsOperand op);
+void createMipsLA(MipsOperand op1,MipsOperand op2);

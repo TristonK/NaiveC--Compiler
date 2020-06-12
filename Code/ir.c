@@ -810,6 +810,8 @@ Operand irOpFunc(char* name){
     if(strcmp(name,"main")){
         strcat(new_op->u.name, "_f");
     }
+    new_op->in_func = NULL;
+    new_op->offset.func_stack_size = 0;
     return new_op;
 }
 
@@ -823,6 +825,8 @@ Operand irOpVar(char* name){
     new_op->u.name = malloc(strlen(name)+3);
     strcpy(new_op->u.name, name);
     strcat(new_op->u.name, "_v");
+    new_op->in_func = NULL;
+    new_op->offset.var_offset = 0;
     /*if(sym!=NULL){
         sym->op = new_op;
     }*/
@@ -833,6 +837,8 @@ Operand irOpConstant(int num){
     Operand new_op = malloc(sizeof(struct Operand_));
     new_op->kind = OP_CONSTANT;
     new_op->u.value = num;
+    new_op->in_func = NULL;
+    new_op->offset.var_offset = 0;
     return new_op;
 }
 
@@ -844,6 +850,8 @@ Operand irOpTemp(){
     sprintf(temp,"ts_%d",temp_gen);
     temp_gen ++;
     new_op->u.name = temp;
+    new_op->in_func = NULL;
+    new_op->offset.var_offset = 0;
     return new_op;
 }
 
@@ -877,6 +885,8 @@ Operand irOpAddr(char* name){
     new_op->u.name = malloc(strlen(name)+3);
     strcpy(new_op->u.name, name);
     strcat(new_op->u.name, "_v");
+    new_op->in_func = NULL;
+    new_op->offset.var_offset = 0;
     return new_op;
 }
 
