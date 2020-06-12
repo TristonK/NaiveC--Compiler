@@ -10,13 +10,13 @@ char* printMipsOperand(MipsOperand op){
         sprintf(buf_reg,"$%d",op->u.value);
         return buf_reg;
     case MOP_IMM:
-        char* buf = malloc(sizeof(char)*12);
+		char* buf = malloc(sizeof(char)*12);
         sprintf(buf,"%d",op->u.value);
         return buf;
     case MOP_FUNC:
         return op->u.name;
     case MOP_OFFSET:
-        char* offset = malloc(sizeof(char)*12);
+		char* offset = malloc(sizeof(char)*12);
         sprintf(offset,"%d($%d)",op->u.offset.offset,op->u.offset.reg);
         return offset;
     default:
