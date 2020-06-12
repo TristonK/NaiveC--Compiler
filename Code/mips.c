@@ -183,6 +183,7 @@ InterCodes genMips(InterCodes codes){
         MipsOperand op2 = getVarToReg(code->u.binop.op2);
         MipsOperand tmp_ans = createTmpReg();
         createMipsDiv(tmp_ans,op1,op2);
+        //createMipsMflo(tmp_ans);
         createMipsSw(tmp_ans,result);
         break;
     }
@@ -231,6 +232,8 @@ InterCodes genMips(InterCodes codes){
             arg_cnt++;
             getCnt = getCnt->next;
         }
+        /*MipsOperand sizeee = createMOpImm(-arg_cnt*4);
+        createMipsAddi(mips_sp,mips_sp,sizeee);*/
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             MipsOperand arg = getVarToReg(code->u.single_op.result);
@@ -562,6 +565,8 @@ MipsOperand insertFuncStack(Operand op,int size){
             assert(0);
             break;
     }
+    /*MipsOperand sizeee = createMOpImm(-size);
+    createMipsAddi(mips_sp,mips_sp,sizeee);*/
     return createMOpOffset(30,-offset);
 }
 
