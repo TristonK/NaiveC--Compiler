@@ -18,9 +18,13 @@ void MipsInit(){
     mips_v0 = malloc(sizeof(struct Mips_Operand_));
     mips_v0->kind = MOP_REG;
     mips_v0->u.value = 2;
+    mips_a0 = malloc(sizeof(struct Mips_Operand_));
+    mips_a0->kind = MOP_REG;
+    mips_a0->u.value = 4;
 }
 
 void MipsGen(){
+    MipsInit();
     mips_head = malloc(sizeof(struct MipsCode_));
     mips_tail = mips_head;
     InterCodes head = ir_root->next;
@@ -144,11 +148,17 @@ InterCodes genMips(InterCodes codes){
         createMipsFunc(op);
         break;
     case CODE_PARAM:
-        sprintf(buf,"PARAM %s\n",printOperand(code->u.single_op.result));
-        break;
+        while(codes!=NULL && codes->code.kind == CODE_ARG){
+            code = &(codes->code);
+            codes = codes->next;
+        }
+        return codes;
     case CODE_ARG:
-        sprintf(buf,"ARG %s\n",printOperand(code->u.single_op.result));
-        break;
+        while(codes!=NULL && codes->code.kind == CODE_ARG){
+            code = &(codes->code);
+            codes = codes->next;
+        }
+        return codes;
     case CODE_RETURN:
         // move $v0 reg(x)
         // jr $ra

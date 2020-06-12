@@ -338,6 +338,9 @@ Operand cur_func;
 int regMap[32];
 //8-15,24-25 duanqi  16-23 changqi
 
+void MipsInit();
+void MipsGen();
+InterCodes genMips(InterCodes codes);
 void createMipsLabel(MipsOperand op);
 void createMipsFunc(MipsOperand op);
 void createMipsLi(MipsOperand op1,MipsOperand op2);
@@ -354,3 +357,14 @@ void createMipsJ(MipsOperand op);
 void createMipsJal(MipsOperand op);
 void createMipsJr(MipsOperand op);
 void createMipsLA(MipsOperand op1,MipsOperand op2);
+MipsOperand createMOpLabel(Operand op);
+MipsOperand createMOpFunc(Operand op);
+MipsOperand createMOpReg(int reg);
+MipsOperand createMOpOffset(int reg,int offset);
+MipsOperand createMOpImm(int imm);
+void addMipsCodes(MipsCode newcode);
+MipsOperand getOffsetForFP(Operand op);
+MipsOperand insertFuncStack(Operand op,int size);
+MipsOperand getVarToReg(Operand op);
+MipsOperand createTmpReg();
+void clearReg();
