@@ -1,28 +1,24 @@
 #include "common.h"
 
 char* printMipsOperand(MipsOperand op){
+    if(op->kind == MOP_LABEL ||op->kind==MOP_FUNC){return op->u.name;}
+    char* buf = malloc(sizeof(char)*12);
     switch (op->kind)
     {
-    case MOP_LABEL:
-        return op->u.name;
     case MOP_REG:
-        char* buf_reg = malloc(sizeof(char)*8);
-        sprintf(buf_reg,"$%d",op->u.value);
-        return buf_reg;
+        sprintf(buf,"$%d",op->u.value);
+        break;
     case MOP_IMM:
-        char* buf = malloc(sizeof(char)*12);
         sprintf(buf,"%d",op->u.value);
-        return buf;
-    case MOP_FUNC:
-        return op->u.name;
+        break;
     case MOP_OFFSET:
-        char* offset = malloc(sizeof(char)*12);
-        sprintf(offset,"%d($%d)",op->u.offset.offset,op->u.offset.reg);
-        return offset;
+        sprintf(buf,"%d($%d)",op->u.offset.offset,op->u.offset.reg);
+        break;
     default:
         assert(0);
         return NULL;
     }
+    return buf;
 }
 
 char* printMipsCode(MipsCode code){

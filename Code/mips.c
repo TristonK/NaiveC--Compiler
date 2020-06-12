@@ -39,14 +39,15 @@ InterCodes genMips(InterCodes codes){
     char* buf = malloc(sizeof(char)*80);
     switch (code->kind)
     {
-    case CODE_IF:
+    case CODE_IF:{
         // beq reg(x),reg(y),z
         MipsOperand op1 = getOffsetForFP(code->u.if_op.left);
         MipsOperand op2 = getOffsetForFP(code->u.if_op.right);
         MipsOperand op3 = createMOpLabel(code->u.if_op.label);
         createMipsRelop(op1,op2,op3,code->u.if_op.relop);
         break;
-    case CODE_ASSIGN:
+    }
+    case CODE_ASSIGN:{
         //li reg(x) k
         //move reg(x),reg(y)
         MipsOperand op1 = getOffsetForFP(code->u.assign.left);
@@ -55,12 +56,14 @@ InterCodes genMips(InterCodes codes){
         createMipsMove(tmp,op2);
         createMipsSw(tmp,op1);
         break;
-    case CODE_LABEL:
+    }
+    case CODE_LABEL:{
         //x:
         MipsOperand op = createMOpLabel(code->u.single_op.result);
         createMipsLabel(op);
         break;
-    case CODE_REF:
+    }
+    case CODE_REF:{
         //printf("it's not support suppose\n");
         MipsOperand op1 = getOffsetForFP(code->u.assign.left);
         MipsOperand op2 = getOffsetForFP(code->u.assign.right);
@@ -68,7 +71,8 @@ InterCodes genMips(InterCodes codes){
         createMipsLA(tmp,op2);
         createMipsSw(tmp,op1);
         break;
-    case CODE_DEREF:
+    }
+    case CODE_DEREF:{
         //lw reg(x),0(reg(y))
         MipsOperand op1 = getOffsetForFP(code->u.assign.left);
         MipsOperand op2_reg = getVarToReg(code->u.assign.right);
@@ -77,14 +81,16 @@ InterCodes genMips(InterCodes codes){
         createMipsLw(tmp,op2);
         createMipsSw(tmp,op1); 
         break;
-    case CODE_DEREF_ASSIGN:
+    }
+    case CODE_DEREF_ASSIGN:{
         //sw reg(y) 0(reg(x))
         MipsOperand op1 = getVarToReg(code->u.assign.right);
         MipsOperand op2_reg = getVarToReg(code->u.assign.left);
         MipsOperand op2 = createMOpOffset(op2_reg->u.value,0);
         createMipsSw(op1,op2); 
         break;
-    case CODE_ADD:
+    }
+    case CODE_ADD:{
         // addi
         if(code->u.binop.op1->kind==OP_CONSTANT && code->u.binop.op2!=OP_CONSTANT){
             MipsOperand result = getOffsetForFP(code->u.binop.result);
@@ -109,7 +115,8 @@ InterCodes genMips(InterCodes codes){
             createMipsSw(tmp_ans,result);
         }
         break;
-    case CODE_SUB:
+    }
+    case CODE_SUB:{
         if(code->u.binop.op2->kind==OP_CONSTANT && code->u.binop.op1!=OP_CONSTANT){
             MipsOperand result = getOffsetForFP(code->u.binop.result);
             MipsOperand op1 = getVarToReg(code->u.binop.op1);
@@ -126,7 +133,8 @@ InterCodes genMips(InterCodes codes){
             createMipsSw(tmp_ans,result);
         }
         break;
-    case CODE_MUL:
+    }
+    case CODE_MUL:{
         MipsOperand result = getOffsetForFP(code->u.binop.result);
         MipsOperand op1 = getVarToReg(code->u.binop.op1);
         MipsOperand op2 = getVarToReg(code->u.binop.op2);
@@ -134,7 +142,8 @@ InterCodes genMips(InterCodes codes){
         createMipsMul(tmp_ans,op1,op2);
         createMipsSw(tmp_ans,result);
         break;
-    case CODE_DIV:
+    }
+    case CODE_DIV:{
         MipsOperand result = getOffsetForFP(code->u.binop.result);
         MipsOperand op1 = getVarToReg(code->u.binop.op1);
         MipsOperand op2 = getVarToReg(code->u.binop.op2);
@@ -142,23 +151,27 @@ InterCodes genMips(InterCodes codes){
         createMipsDiv(tmp_ans,op1,op2);
         createMipsSw(tmp_ans,result);
         break;
-    case CODE_FUNC:
+    }
+    case CODE_FUNC:{
         cur_func = code->u.single_op.result;
         MipsOperand op = createMOpFunc(code->u.single_op.result);
         createMipsFunc(op);
         break;
-    case CODE_PARAM:
+    }
+    case CODE_PARAM:{
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             codes = codes->next;
         }
         return codes;
-    case CODE_ARG:
+    }
+    case CODE_ARG:{
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             codes = codes->next;
         }
         return codes;
+    }
     case CODE_RETURN:
         // move $v0 reg(x)
         // jr $ra
@@ -169,7 +182,7 @@ InterCodes genMips(InterCodes codes){
         // move reg(x),$v0
         //sprintf(buf,"%s := CALL %s\n",printOperand(code->u.assign.left),printOperand(code->u.assign.right));
         break;
-    case CODE_READ:
+    case CODE_READ:{
         MipsOperand minus4 = createMOpImm(-4);
         MipsOperand plus4 = createMOpImm(4);
         createMipsAddi(mips_sp,mips_sp,minus4);
@@ -183,7 +196,8 @@ InterCodes genMips(InterCodes codes){
         MipsOperand to_read = getOffsetForFP(code->u.single_op.result);
         createMipsSw(t1,to_read);
         break;
-    case CODE_WRITE:
+    }
+    case CODE_WRITE:{
         MipsOperand t2 = getVarToReg(code->u.single_op.result);
         createMipsMove(mips_a0,t2);
         MipsOperand minus4 = createMOpImm(-4);
@@ -197,13 +211,16 @@ InterCodes genMips(InterCodes codes){
         MipsOperand imm0 = createMOpImm(0);
         createMipsMove(mips_v0,imm0);
         break;
-    case CODE_GOTO:
+    }
+    case CODE_GOTO:{
         MipsOperand op = createMOpLabel(code->u.single_op.result);
         createMipsJ(op);
         break;
-    case CODE_DEC:
+    }
+    case CODE_DEC:{
         insertFuncStack(code->u.assign.left,code->u.assign.right->u.value);
         break;
+    }
     default:
         return NULL;
         break;
@@ -438,18 +455,21 @@ MipsOperand getVarToReg(Operand op){
     MipsOperand ret = createTmpReg();
     switch (op->kind)
     {
-    case OP_CONSTANT:
+    case OP_CONSTANT:{
         MipsOperand imm = createMOpImm(op->u.value);
         createMipsLi(ret,imm);
         break;
-    case OP_VARIABLE:
+    }
+    case OP_VARIABLE:{
         MipsOperand pos = createMOpOffset(30,-op->offset.var_offset);
         createMipsLw(ret,pos);
         break;
-    case OP_ADDRESS:
+    }
+    case OP_ADDRESS:{
         MipsOperand pos = createMOpOffset(30,-op->offset.var_offset);
         createMipsLA(ret,pos);
         break;
+    }
     default:
         break;
     }
