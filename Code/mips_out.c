@@ -6,7 +6,21 @@ char* printMipsOperand(MipsOperand op){
     switch (op->kind)
     {
     case MOP_REG:
-        sprintf(buf,"$%d",op->u.value);
+        if (op->u.value == 2){ 
+            sprintf(buf, "$v0");
+        } else if(op->u.value>=4 && op->u.value<=7){
+            sprintf(buf,"$a%d",op->u.value-4);
+        }else if(op->u.value>=8&&op->u.value<=15){
+            sprintf(buf,"$t%d",op->u.value-8);
+        }else if(op->u.value==29){
+            sprintf(buf,"$sp");
+        }else if(op->u.value==30){
+            sprintf(buf,"$fp");
+        }else if(op->u.value==31){
+            sprintf(buf,"$ra");
+        } else{
+            sprintf(buf,"$%d",op->u.value);
+        }
         break;
     case MOP_IMM:
         sprintf(buf,"%d",op->u.value);
@@ -26,7 +40,7 @@ char* printMipsCode(MipsCode code){
     switch (code->kind)
     {
     case MIPS_LABEL:
-        sprintf(buf,"label %s:\n",printMipsOperand(code->u.single_op.op1));
+        sprintf(buf,"%s:\n",printMipsOperand(code->u.single_op.op1));
         break; 
     case MIPS_LI:
         sprintf(buf,"  li %s, %s\n",printMipsOperand(code->u.assign.op1),printMipsOperand(code->u.assign.op2));
@@ -59,13 +73,13 @@ char* printMipsCode(MipsCode code){
         sprintf(buf,"  lw %s, %s\n",printMipsOperand(code->u.assign.op1),printMipsOperand(code->u.assign.op2));
         break;
     case MIPS_J:
-        sprintf(buf,"  j %s:\n",printMipsOperand(code->u.single_op.op1));
+        sprintf(buf,"  j %s\n",printMipsOperand(code->u.single_op.op1));
         break;
     case MIPS_JAL:
-        sprintf(buf,"  jal %s:\n",printMipsOperand(code->u.single_op.op1));
+        sprintf(buf,"  jal %s\n",printMipsOperand(code->u.single_op.op1));
         break; 
     case MIPS_JR:
-        sprintf(buf,"  jr %s:\n",printMipsOperand(code->u.single_op.op1));
+        sprintf(buf,"  jr %s\n",printMipsOperand(code->u.single_op.op1));
         break;
     case MIPS_BEQ:
         sprintf(buf,"  beq %s, %s, %s\n",printMipsOperand(code->u.binop.op1),printMipsOperand(code->u.binop.op2),printMipsOperand(code->u.binop.op3));
@@ -86,10 +100,10 @@ char* printMipsCode(MipsCode code){
         sprintf(buf,"  ble %s, %s, %s\n",printMipsOperand(code->u.binop.op1),printMipsOperand(code->u.binop.op2),printMipsOperand(code->u.binop.op3));
         break;
     case MIPS_ANNO:
-        sprintf(buf,"# %s\n",code->u.annotation);
+        sprintf(buf,"# %s",code->u.annotation);
         break;
     case MIPS_FUNC:
-        sprintf(buf,"%s:\n",printMipsOperand(code->u.single_op.op1));
+        sprintf(buf,"\n%s:\n",printMipsOperand(code->u.single_op.op1));
         break;
     case MIPS_LA:
         sprintf(buf,"  la %s, %s\n",printMipsOperand(code->u.assign.op1),printMipsOperand(code->u.assign.op2));

@@ -201,7 +201,8 @@ struct Operand_
     union{
         int var_offset;
         int func_stack_size;
-    }offset;   
+    }offset;
+    int in_reg;   
 };
 
 struct InterCode{
@@ -277,7 +278,7 @@ InterCodes ir_root;
 InterCodes ir_tail;
 
 //ir_file.c
-
+char* printIRCode(InterCode *code);
 void printIRCodes(FILE* out);
 
 void optimize();
@@ -301,6 +302,7 @@ struct Mips_Operand_
         char* name;
         struct {int reg; int offset;} offset;
     }u;
+    Operand reg_op;
 };
 
 struct MipsCode_{
@@ -331,9 +333,11 @@ MipsCode mips_tail;
 MipsOperand mips_read;
 MipsOperand mips_write;
 MipsOperand mips_sp;
+MipsOperand mips_fp;
 MipsOperand mips_ra;
 MipsOperand mips_v0;
-MipsOperand mips_a0;
+MipsOperand mips_arg[5];//v1,a0,a1,a2,a3
+MipsOperand mips_0;
 Operand cur_func;
 int regMap[32];
 //8-15,24-25 duanqi  16-23 changqi
@@ -356,6 +360,7 @@ void createMipsSw(MipsOperand op1,MipsOperand op2);
 void createMipsJ(MipsOperand op);
 void createMipsJal(MipsOperand op);
 void createMipsJr(MipsOperand op);
+void createMipsRelop(MipsOperand op1,MipsOperand op2,MipsOperand op3,Operand relop);
 void createMipsLA(MipsOperand op1,MipsOperand op2);
 MipsOperand createMOpLabel(Operand op);
 MipsOperand createMOpFunc(Operand op);

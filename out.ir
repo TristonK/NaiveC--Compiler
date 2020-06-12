@@ -1,0 +1,4 @@
+FUNCTION main :
+a_v := #5
+ts_1 := #0
+RETURN ts_1

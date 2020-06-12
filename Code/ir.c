@@ -812,6 +812,7 @@ Operand irOpFunc(char* name){
     }
     new_op->in_func = NULL;
     new_op->offset.func_stack_size = 0;
+    new_op->in_reg = -1;
     return new_op;
 }
 
@@ -827,9 +828,10 @@ Operand irOpVar(char* name){
     strcat(new_op->u.name, "_v");
     new_op->in_func = NULL;
     new_op->offset.var_offset = 0;
-    /*if(sym!=NULL){
+    new_op->in_reg = -1;
+    if(sym!=NULL){
         sym->op = new_op;
-    }*/
+    }
     return new_op;
 }
 
@@ -839,6 +841,7 @@ Operand irOpConstant(int num){
     new_op->u.value = num;
     new_op->in_func = NULL;
     new_op->offset.var_offset = 0;
+    new_op->in_reg = -1;
     return new_op;
 }
 
@@ -852,6 +855,7 @@ Operand irOpTemp(){
     new_op->u.name = temp;
     new_op->in_func = NULL;
     new_op->offset.var_offset = 0;
+    new_op->in_reg = -1;
     return new_op;
 }
 
@@ -895,8 +899,9 @@ Operand irOpLabel(){
     new_op->kind = OP_LABEL;
     char* temp = malloc(sizeof(char)*16);
     label_gen ++;
-    sprintf(temp,"l_%d",label_gen);
+    sprintf(temp,"label%d",label_gen);
     new_op->u.name = temp;
+    new_op->in_reg = -1;
     return new_op;
 }
 

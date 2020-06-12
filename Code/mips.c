@@ -1,4 +1,16 @@
 #include "common.h"
+#define mips_debug
+
+#ifdef mips_debug
+
+void createMipsANNO(char* anno){
+    MipsCode annotation = malloc(sizeof(struct MipsCode_));
+    annotation->kind = MIPS_ANNO;
+    annotation->u.annotation = anno;
+    addMipsCodes(annotation);
+}
+
+#endif
 
 void MipsInit(){
     mips_read = malloc(sizeof(struct Mips_Operand_));
@@ -18,9 +30,18 @@ void MipsInit(){
     mips_v0 = malloc(sizeof(struct Mips_Operand_));
     mips_v0->kind = MOP_REG;
     mips_v0->u.value = 2;
-    mips_a0 = malloc(sizeof(struct Mips_Operand_));
-    mips_a0->kind = MOP_REG;
-    mips_a0->u.value = 4;
+    
+    mips_fp = malloc(sizeof(struct Mips_Operand_));
+    mips_fp->kind = MOP_REG;
+    mips_fp->u.value = 30;
+    mips_0 = malloc(sizeof(struct Mips_Operand_));
+    mips_0->kind = MOP_REG;
+    mips_0->u.value = 0;
+    for(int i=3;i<=7;i++){
+        mips_arg[i-3] = malloc(sizeof(struct Mips_Operand_));
+        mips_arg[i-3]->kind = MOP_REG;
+        mips_arg[i-3]->u.value = i;
+    }
 }
 
 void MipsGen(){
@@ -29,6 +50,9 @@ void MipsGen(){
     mips_tail = mips_head;
     InterCodes head = ir_root->next;
     while(head!=NULL){
+        #ifdef mips_debug
+        createMipsANNO(printIRCode(&(head->code)));
+        #endif
         head = genMips(head);
         clearReg();
     }
@@ -41,8 +65,8 @@ InterCodes genMips(InterCodes codes){
     {
     case CODE_IF:{
         // beq reg(x),reg(y),z
-        MipsOperand op1 = getOffsetForFP(code->u.if_op.left);
-        MipsOperand op2 = getOffsetForFP(code->u.if_op.right);
+        MipsOperand op1 = getVarToReg(code->u.if_op.left);
+        MipsOperand op2 = getVarToReg(code->u.if_op.right);
         MipsOperand op3 = createMOpLabel(code->u.if_op.label);
         createMipsRelop(op1,op2,op3,code->u.if_op.relop);
         break;
@@ -92,14 +116,14 @@ InterCodes genMips(InterCodes codes){
     }
     case CODE_ADD:{
         // addi
-        if(code->u.binop.op1->kind==OP_CONSTANT && code->u.binop.op2!=OP_CONSTANT){
+        if(code->u.binop.op1->kind==OP_CONSTANT && code->u.binop.op2->kind!=OP_CONSTANT){
             MipsOperand result = getOffsetForFP(code->u.binop.result);
             MipsOperand op1 = getVarToReg(code->u.binop.op2);
             MipsOperand op2 = createMOpImm(code->u.binop.op1->u.value);
             MipsOperand tmp_ans = createTmpReg();
             createMipsAddi(tmp_ans,op1,op2);
             createMipsSw(tmp_ans,result);
-        } else if(code->u.binop.op2->kind==OP_CONSTANT && code->u.binop.op1!=OP_CONSTANT){
+        } else if(code->u.binop.op2->kind==OP_CONSTANT && code->u.binop.op1->kind!=OP_CONSTANT){
             MipsOperand result = getOffsetForFP(code->u.binop.result);
             MipsOperand op1 = getVarToReg(code->u.binop.op1);
             MipsOperand op2 = createMOpImm(code->u.binop.op2->u.value);
@@ -117,7 +141,7 @@ InterCodes genMips(InterCodes codes){
         break;
     }
     case CODE_SUB:{
-        if(code->u.binop.op2->kind==OP_CONSTANT && code->u.binop.op1!=OP_CONSTANT){
+        if(code->u.binop.op2->kind==OP_CONSTANT && code->u.binop.op1->kind!=OP_CONSTANT){
             MipsOperand result = getOffsetForFP(code->u.binop.result);
             MipsOperand op1 = getVarToReg(code->u.binop.op1);
             MipsOperand op2 = createMOpImm(-code->u.binop.op2->u.value);
@@ -155,28 +179,74 @@ InterCodes genMips(InterCodes codes){
     case CODE_FUNC:{
         cur_func = code->u.single_op.result;
         MipsOperand op = createMOpFunc(code->u.single_op.result);
+        MipsOperand minus4 = createMOpImm(-4);
         createMipsFunc(op);
+        createMipsAddi(mips_sp,mips_sp,minus4);
+        MipsOperand sp0 =  createMOpOffset(29,0);
+        createMipsSw(mips_fp,sp0);
+        createMipsMove(mips_fp,mips_sp);
+        MipsOperand sizeee = createMOpImm(-10*1024);
+        createMipsAddi(mips_sp,mips_sp,sizeee);
         break;
     }
     case CODE_PARAM:{
+       
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             codes = codes->next;
+            
         }
         return codes;
     }
     case CODE_ARG:{
+        int offset = 0;
+        int arg_cnt = 0;
+        InterCodes getCnt = codes;
+        while(getCnt !=NULL && getCnt->code.kind==CODE_ARG){
+            arg_cnt++;
+            getCnt = getCnt->next;
+        }
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             codes = codes->next;
+            MipsOperand arg = getVarToReg(code->u.single_op->result);
+            if(arg_cnt<=5 && arg_cnt>=0){
+                if(mips_arg[arg_cnt-1]->reg_op!=NULL){
+                    MipsOperand old = getOffsetForFP(mips_arg[arg_cnt-1]->reg_op);
+                    mips_arg[arg_cnt-1]->reg_op->in_reg = -1;
+                    createMipsSw(mips_arg[arg_cnt-1],old);
+                }
+                createMipsMove(mips_arg[arg_cnt-1],arg);
+                //mips_arg[arg_cnt-1] = code->u.single_op->result;
+                arg_cnt--;
+            }
+            else{
+                MipsOperand offsets =;
+                offset+=4;
+            }
         }
         return codes;
     }
     case CODE_RETURN:
         // move $v0 reg(x)
         // jr $ra
-        //sprintf(buf,"RETURN %s\n",printOperand(code->u.single_op.result));
+    {
+        MipsOperand ret = getVarToReg(code->u.single_op.result);
+        createMipsMove(mips_v0,ret);
+        createMipsMove(mips_sp,mips_fp);
+        MipsOperand plus4 = createMOpImm(4);
+        MipsOperand sp0 = createMOpOffset(29,0);
+        createMipsLw(mips_fp,sp0);
+        createMipsAddi(mips_sp,mips_sp,4);
+        createMipsJr(mips_ra);
+        for(int i=0;i<5;i++){
+            if(mips_arg[i]->reg_op!=NULL){
+                mips_arg[i]->reg_op->in_reg = -1;
+                mips_arg[i]->reg_op = NULL;
+            }
+        }
         break;
+    }
     case CODE_CALL:
         // jal f
         // move reg(x),$v0
@@ -199,17 +269,16 @@ InterCodes genMips(InterCodes codes){
     }
     case CODE_WRITE:{
         MipsOperand t2 = getVarToReg(code->u.single_op.result);
-        createMipsMove(mips_a0,t2);
+        createMipsMove(mips_arg[1],t2);
         MipsOperand minus4 = createMOpImm(-4);
         MipsOperand plus4 = createMOpImm(4);
         createMipsAddi(mips_sp,mips_sp,minus4);
         MipsOperand sp0 =  createMOpOffset(29,0);
         createMipsSw(mips_ra,sp0);
-        createMipsJal(mips_read);
+        createMipsJal(mips_write);
         createMipsLw(mips_ra,sp0);
         createMipsAddi(mips_sp,mips_sp,plus4);
-        MipsOperand imm0 = createMOpImm(0);
-        createMipsMove(mips_v0,imm0);
+        createMipsMove(mips_v0,mips_0);
         break;
     }
     case CODE_GOTO:{
@@ -235,12 +304,6 @@ void createMipsLabel(MipsOperand op){
     addMipsCodes(newcode);
 }
 
-void createMipsFunc(MipsOperand op){
-    MipsCode newcode = malloc(sizeof(struct MipsCode_));
-    newcode->kind = MIPS_FUNC;
-    newcode->u.single_op.op1 = op;
-    addMipsCodes(newcode);
-}
 
 void createMipsLi(MipsOperand op1,MipsOperand op2){
     MipsCode newcode = malloc(sizeof(struct MipsCode_));
@@ -428,14 +491,23 @@ MipsOperand getOffsetForFP(Operand op){
     if (op->in_func==NULL){
         return insertFuncStack(op,4);
     }
+    if(op->in_reg!=0){
+        return mips_arg[op->in_reg];
+    }
     return createMOpOffset(30,-op->offset.var_offset);
 }
 
 MipsOperand insertFuncStack(Operand op,int size){
+    //printf("insert %s\n",op->u.name);
     int offset = 0;
     switch (op->kind)
     {
         case OP_VARIABLE:
+            op->in_func = cur_func;
+            offset = op->in_func->offset.func_stack_size + size;
+            op->in_func->offset.func_stack_size = offset;
+            op->offset.var_offset = offset;
+            break;
         case OP_ADDRESS:
             op->in_func = cur_func;
             offset = op->in_func->offset.func_stack_size + size;
@@ -452,6 +524,9 @@ MipsOperand insertFuncStack(Operand op,int size){
 
 
 MipsOperand getVarToReg(Operand op){
+    if(op->in_reg!=-1){
+        return mips_arg[op->in_reg];
+    }
     MipsOperand ret = createTmpReg();
     switch (op->kind)
     {
@@ -461,16 +536,19 @@ MipsOperand getVarToReg(Operand op){
         break;
     }
     case OP_VARIABLE:{
+        //printf("find %s \n",op->u.name);
         MipsOperand pos = createMOpOffset(30,-op->offset.var_offset);
         createMipsLw(ret,pos);
         break;
     }
     case OP_ADDRESS:{
+        //printf("find %s \n",op->u.name);
         MipsOperand pos = createMOpOffset(30,-op->offset.var_offset);
         createMipsLA(ret,pos);
         break;
     }
     default:
+        assert(0);
         break;
     }
     return ret;
@@ -487,6 +565,7 @@ MipsOperand createTmpReg(){
         for(int i=16;i<24;i++){if(!regMap[i]){reg=i;break;}}
     }
     if(reg==-1){printf("shit reg no tmp\n");assert(0);}
+    regMap[reg] =1;
     return createMOpReg(reg);
 }
 
