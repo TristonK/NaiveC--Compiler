@@ -176,6 +176,7 @@ Symbol irGetArray(ast* root, Type type,int inStrcut){
         newarray = type;
         Symbol sym = createSymbol(newarray,root->child->context);
         hashInsert(sym);
+        //irOpVar(root->child->context);
         return sym;
     }else{
         newarray->kind = ARRAY;
@@ -244,8 +245,8 @@ Type irParamDec(ast* root){
         return sym->t.type;
     }else{
         Symbol sym = createSymbol(type,c1s(root)->child->context);
-        irCodeOp1(CODE_PARAM,irOpVar(c1s(root)->child->context));
         hashInsert(sym);
+        irCodeOp1(CODE_PARAM,irOpVar(c1s(root)->child->context));
         return type;
     }
 }
@@ -298,7 +299,8 @@ void irDec(ast* root, Type type){
     if(c1s(root->child->child)!=NULL){//array
         sym = irGetArray(root->child->child,type,0);
         irCodeOp2(CODE_DEC,irOpVar(sym->name),irOpConstant(getArraySize(sym)));
-        sym->op = irOpAddr(sym->name);
+        sym->op->kind = OP_ADDRESS;
+        //sym->op = irOpAddr(sym->name);
     }else{
         sym = irCreateSymbol(type,root->child->child->child->context);
         if(type->kind==STRUCTURE){
@@ -826,6 +828,10 @@ Operand irOpVar(char* name){
     new_op->u.name = malloc(strlen(name)+3);
     strcpy(new_op->u.name, name);
     strcat(new_op->u.name, "_v");
+    /*if(!strcmp(new_op->u.name,"x_v")){
+        if(sym==NULL){printf("fu\n");}
+        printf("shit\n");
+    }*/
     new_op->in_func = NULL;
     new_op->offset.var_offset = 0;
     new_op->in_reg = -1;

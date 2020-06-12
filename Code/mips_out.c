@@ -1,11 +1,12 @@
 #include "common.h"
 
 char* printMipsOperand(MipsOperand op){
+    if(op==NULL){printf("shit\n");}
     if(op->kind == MOP_LABEL ||op->kind==MOP_FUNC){return op->u.name;}
     char* buf = malloc(sizeof(char)*12);
     switch (op->kind)
     {
-    case MOP_REG:
+    case MOP_REG:{
         if (op->u.value == 2){ 
             sprintf(buf, "$v0");
         } else if(op->u.value>=4 && op->u.value<=7){
@@ -22,6 +23,7 @@ char* printMipsOperand(MipsOperand op){
             sprintf(buf,"$%d",op->u.value);
         }
         break;
+    }
     case MOP_IMM:
         sprintf(buf,"%d",op->u.value);
         break;
@@ -29,6 +31,7 @@ char* printMipsOperand(MipsOperand op){
         sprintf(buf,"%d($%d)",op->u.offset.offset,op->u.offset.reg);
         break;
     default:
+        printf("shit error for %d\n",op->kind);
         assert(0);
         return NULL;
     }
@@ -37,6 +40,7 @@ char* printMipsOperand(MipsOperand op){
 
 char* printMipsCode(MipsCode code){
     char* buf = malloc(sizeof(char)*64);
+    //printf("%d\n",code->kind);
     switch (code->kind)
     {
     case MIPS_LABEL:
@@ -67,6 +71,7 @@ char* printMipsCode(MipsCode code){
         sprintf(buf,"  mflo %s:\n",printMipsOperand(code->u.single_op.op1));
         break;
     case MIPS_SW:
+        //printf("%s\n",printMipsOperand(code->u.assign.op1));
         sprintf(buf,"  sw %s, %s\n",printMipsOperand(code->u.assign.op1),printMipsOperand(code->u.assign.op2));
         break; 
     case MIPS_LW:
@@ -107,7 +112,9 @@ char* printMipsCode(MipsCode code){
         break;
     case MIPS_LA:
         sprintf(buf,"  la %s, %s\n",printMipsOperand(code->u.assign.op1),printMipsOperand(code->u.assign.op2));
+        break;
     default:
+        printf("shit error %d\n",code->kind);
         assert(0);
         break;
     }
@@ -121,6 +128,7 @@ void printMipsCodes(FILE* out){
     MipsCode head = mips_head->next;
     while(head!=NULL){
         char* ret = printMipsCode(head);
+        //printf("%s",ret);
         fprintf(out,"%s",ret);
         head = head->next;
     }

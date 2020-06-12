@@ -6,7 +6,7 @@
 
 ## 已实现内容
 
-完成了所有必做内容与选做内容,并对中间代码进行了少量的优化。
+完成了所有内容
 
 ## 代码框架
 
@@ -28,6 +28,10 @@
 
 `optimize.c` 代码优化
 
+`mips.c` mips代码翻译过程
+
+`mips_out.c` mips代码输出
+
 ## 如何编译
 
 使用助教提供的Makefile进行编译生成parser
@@ -42,31 +46,17 @@ GNU Flex 2.6.4
 
 GNU Bison 3.0.4
 
+QtSPIM 9.1.9
+
 ## 实现的重点细节
 
 1. 实现过程
 
-   将语义分析的流程类似，将代码去除掉报错，并加上一些翻译过程即得到了最终代码。代码维护了一个双向链表来存储ir代码。在符号表上还是大部分维持着lab2的实验代码过程。
+   利用了讲义中提到的最朴素的做法，朴素式分配寄存器，把所有的变量放到栈上面（即使是函数的参数也被朴素的放上去了），同时为了避免麻烦的计算，我直接先把栈设的很大（这样就避免对sp的反复计算了），然后以fp为基准对各个变量进行定位。
 
 2. 数组赋值的实现
 
-   考虑到数组赋值的实现，分在两部分进行，一种是类似于 `a=b` 这种，会识别为ID的，另一种情况是高维数组`a[3]=b[3]`的这种情况，在两处实现，但是实现方式类似，均为考虑调用`irExp`后判断类型是否为数组，然后获取两个数组中较小的那个大小，然后按地址逐渐加4，逐渐赋值。前者的代码如下（后者情况类似）：
-
-   ```c
-   				  Operand t1 = irOpTemp();
-                       Operand t2 = irOpTemp();
-                       Type a = irExp(root->child,t1);
-                       Type b = irExp(c1s2(root),t2);
-                       int a_size = irTypeSize(a);
-                       int b_size = irTypeSize(b);
-                       Operand t3 = irOpTemp();
-                       for(int i=0;i<a_size&&i<b_size;i+=4){
-                           irCodeOp2(CODE_DEREF,t3,t2);
-                           irCodeOp2(CODE_DEREF_ASSIGN,t1,t3);
-                           irCodeOp3(CODE_ADD,t1,t1,irOpConstant(4));
-                           irCodeOp3(CODE_ADD,t2,t2,irOpConstant(4));
-                       }
-   ```
+   
 
 ## 实验中遇到的困难/不足
 

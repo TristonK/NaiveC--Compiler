@@ -1,5 +1,5 @@
 #include "common.h"
-#define mips_debug
+//#define mips_debug
 
 #ifdef mips_debug
 
@@ -52,8 +52,10 @@ void MipsGen(){
         #ifdef mips_debug
         createMipsANNO(printIRCode(&(head->code)));
         #endif
+        //printf("%s",printIRCode(&(head->code)));
         head = genMips(head);
         clearReg();
+        //printf("hi\n");
     }
 }
 
@@ -73,11 +75,20 @@ InterCodes genMips(InterCodes codes){
     case CODE_ASSIGN:{
         //li reg(x) k
         //move reg(x),reg(y)
-        MipsOperand op1 = getOffsetForFP(code->u.assign.left);
-        MipsOperand op2 = getVarToReg(code->u.assign.right);
-        MipsOperand tmp = createTmpReg();
-        createMipsMove(tmp,op2);
-        createMipsSw(tmp,op1);
+        if(code->u.assign.right->kind==OP_ADDRESS){
+            MipsOperand op1 = getOffsetForFP(code->u.assign.left);
+            MipsOperand op2 = getOffsetForFP(code->u.assign.right);
+            MipsOperand tmp = createTmpReg();
+            createMipsLA(tmp,op2);
+            createMipsSw(tmp,op1);
+            break;
+        }else{
+            MipsOperand op1 = getOffsetForFP(code->u.assign.left);
+            MipsOperand op2 = getVarToReg(code->u.assign.right);
+            MipsOperand tmp = createTmpReg();
+            createMipsMove(tmp,op2);
+            createMipsSw(tmp,op1);
+        }
         break;
     }
     case CODE_LABEL:{
@@ -192,22 +203,22 @@ InterCodes genMips(InterCodes codes){
         int cnt = 0;
         int arg_cnt = 0;
         InterCodes getCnt = codes;
-        while(getCnt !=NULL && getCnt->code.kind==CODE_ARG){
+        while(getCnt !=NULL && getCnt->code.kind==CODE_PARAM){
             arg_cnt++;
             getCnt = getCnt->next;
         }
-        int offset = -(arg_cnt-5)*4-4;
+        int offset = -(arg_cnt/*-5*/)*4-4;
         while(codes!=NULL && codes->code.kind == CODE_PARAM){
             code = &(codes->code);
             code->u.single_op.result->in_func = cur_func;
-            if(cnt<5){
+            /*if(cnt<5){
                 code->u.single_op.result->in_reg = cnt;
                 mips_arg[cnt]->reg_op = code->u.single_op.result;
                 cnt++;
-            }else{
-                code->u.single_op.result->u.offset.var_offset = offset;
+            }else{*/
+                code->u.single_op.result->offset.var_offset = offset;
                 offset+=4;
-            }
+            //}
             codes = codes->next;
         }
         return codes;
@@ -223,7 +234,7 @@ InterCodes genMips(InterCodes codes){
         while(codes!=NULL && codes->code.kind == CODE_ARG){
             code = &(codes->code);
             MipsOperand arg = getVarToReg(code->u.single_op.result);
-            if(arg_cnt<=5 && arg_cnt>=0){
+            /*if(arg_cnt<=5 && arg_cnt>=0){
                 if(mips_arg[arg_cnt-1]->reg_op!=NULL){
                     mips_arg[arg_cnt-1]->reg_op->in_reg = -1;
                     MipsOperand old = getOffsetForFP(mips_arg[arg_cnt-1]->reg_op);
@@ -233,11 +244,11 @@ InterCodes genMips(InterCodes codes){
                 //mips_arg[arg_cnt-1] = code->u.single_op->result;
                 arg_cnt--;
             }
-            else{
+            else{*/
                 MipsOperand offsets = createMOpOffset(29,offset);
                 createMipsSw(arg,offsets);
                 offset+=4;
-            }
+            //}
             codes = codes->next;
         }
         return codes;
@@ -252,14 +263,14 @@ InterCodes genMips(InterCodes codes){
         MipsOperand plus4 = createMOpImm(4);
         MipsOperand sp0 = createMOpOffset(29,0);
         createMipsLw(mips_fp,sp0);
-        createMipsAddi(mips_sp,mips_sp,4);
+        createMipsAddi(mips_sp,mips_sp,plus4);
         createMipsJr(mips_ra);
-        for(int i=0;i<5;i++){
+        /*for(int i=0;i<5;i++){
             if(mips_arg[i]->reg_op!=NULL){
                 mips_arg[i]->reg_op->in_reg = -1;
                 mips_arg[i]->reg_op = NULL;
             }
-        }
+        }*/
         break;
     }
     case CODE_CALL:
@@ -319,6 +330,7 @@ InterCodes genMips(InterCodes codes){
     }
     case CODE_DEC:{
         insertFuncStack(code->u.assign.left,code->u.assign.right->u.value);
+        //printf("%s\n",code->u.assign.left->u.name);
         break;
     }
     default:
@@ -522,9 +534,9 @@ MipsOperand getOffsetForFP(Operand op){
     if (op->in_func==NULL){
         return insertFuncStack(op,4);
     }
-    if(op->in_reg!=0){
+    /*if(op->in_reg!=-1){
         return mips_arg[op->in_reg];
-    }
+    }*/
     return createMOpOffset(30,-op->offset.var_offset);
 }
 
@@ -555,9 +567,9 @@ MipsOperand insertFuncStack(Operand op,int size){
 
 
 MipsOperand getVarToReg(Operand op){
-    if(op->in_reg!=-1){
+    /*if(op->in_reg!=-1){
         return mips_arg[op->in_reg];
-    }
+    }*/
     MipsOperand ret = createTmpReg();
     switch (op->kind)
     {
